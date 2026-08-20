@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("teacher")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Class {
+  id         String   @id @default(cuid())
+  name       String
+  department String
+  batch      String
+  schedule   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  students           Student[]
+  attendanceSessions AttendanceSession[]
+  assignments        Assignment[]
+
+  @@index([department])
+  @@index([batch])
+}
+
+model Student {
+  id         String  @id @default(cuid())
+  rollNumber String
+  name       String
+  classId    String
+
+  class              Class                 @relation(fields: [classId], references: [id], onDelete: Cascade)
+  attendanceRecords  AttendanceRecord[]
+  submissions        AssignmentSubmission[]
+
+  @@unique([classId, rollNumber])
+  @@index([classId])
+  @@index([rollNumber])
+}
+
+model AttendanceSession {
+  id        String   @id @default(cuid())
+  classId   String
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  class   Class              @relation(fields: [classId], references: [id], onDelete: Cascade)
+  records AttendanceRecord[]
+
+  @@unique([classId, date])
+  @@index([classId])
+  @@index([date])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model AttendanceRecord {
+  id        String          @id @default(cuid())
+  sessionId String
+  studentId String
+  status    AttendanceStatus
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  classId     String
+  title       String
+  description String?
+  dueDate     DateTime
+  totalMarks  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  class       Class                 @relation(fields: [classId], references: [id], onDelete: Cascade)
+  submissions AssignmentSubmission[]
+
+  @@index([classId])
+  @@index([dueDate])
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  LATE
+  NOT_SUBMITTED
+}
+
+model AssignmentSubmission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  status       SubmissionStatus @default(NOT_SUBMITTED)
+  marks        Int?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([status])
+}
