@@ -20,7 +20,7 @@ export async function getAssignments(classId: string | null) {
 
 export async function getAssignmentById(id: string) {
   await connectDB();
-  const assignment = await Assignment.findById(id).lean();
+  const assignment = await Assignment.findOne({ _id: id }).lean();
   if (!assignment) throw new ApiError(404, "Assignment not found");
 
   const submissions = await AssignmentSubmission.find({ assignmentId: id })
@@ -78,14 +78,14 @@ export async function updateAssignment(id: string, data: {
     (updateData as Record<string, unknown>).dueDate = new Date(updateData.dueDate);
   }
 
-  const assignment = await Assignment.findByIdAndUpdate(id, updateData, { new: true });
+  const assignment = await Assignment.findOneAndUpdate({ _id: id }, updateData, { new: true });
   if (!assignment) throw new ApiError(404, "Assignment not found");
   return assignment;
 }
 
 export async function deleteAssignment(id: string) {
   await connectDB();
-  const assignment = await Assignment.findByIdAndDelete(id);
+  const assignment = await Assignment.findOneAndDelete({ _id: id });
   if (!assignment) throw new ApiError(404, "Assignment not found");
   await AssignmentSubmission.deleteMany({ assignmentId: id });
 }
@@ -96,7 +96,7 @@ export async function saveSubmissions(assignmentId: string, submissions: {
   marks?: number | null;
 }[]) {
   await connectDB();
-  const assignment = await Assignment.findById(assignmentId);
+  const assignment = await Assignment.findOne({ _id: assignmentId });
   if (!assignment) throw new ApiError(404, "Assignment not found");
 
   const upserts = submissions.map((sub) =>

@@ -23,7 +23,7 @@ export async function getSessions(classId: string | null) {
 
 export async function getSessionById(id: string) {
   await connectDB();
-  const session = await AttendanceSession.findById(id).populate("classId", "name").lean();
+  const session = await AttendanceSession.findOne({ _id: id }).populate("classId", "name").lean();
   if (!session) throw new ApiError(404, "Session not found");
 
   const records = await AttendanceRecord.find({ sessionId: id })
@@ -45,14 +45,14 @@ export async function createSession(classId: string, date: Date) {
 
 export async function deleteSession(id: string) {
   await connectDB();
-  const session = await AttendanceSession.findByIdAndDelete(id);
+  const session = await AttendanceSession.findOneAndDelete({ _id: id });
   if (!session) throw new ApiError(404, "Session not found");
   await AttendanceRecord.deleteMany({ sessionId: id });
 }
 
 export async function saveAttendance(sessionId: string, records: { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }[]) {
   await connectDB();
-  const session = await AttendanceSession.findById(sessionId);
+  const session = await AttendanceSession.findOne({ _id: sessionId });
   if (!session) throw new ApiError(404, "Session not found");
 
   const upserts = records.map((record) =>

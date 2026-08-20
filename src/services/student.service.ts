@@ -22,7 +22,7 @@ export async function getStudents(classId: string | null, page: number, pageSize
 
 export async function getStudentById(id: string) {
   await connectDB();
-  const student = await Student.findById(id).populate("classId").lean();
+  const student = await Student.findOne({ _id: id }).populate("classId").lean();
   if (!student) throw new ApiError(404, "Student not found");
   return student;
 }
@@ -34,14 +34,14 @@ export async function createStudent(data: { rollNumber: string; name: string; cl
 
 export async function updateStudent(id: string, data: { rollNumber?: string; name?: string; classId?: string }) {
   await connectDB();
-  const student = await Student.findByIdAndUpdate(id, data, { new: true });
+  const student = await Student.findOneAndUpdate({ _id: id }, data, { new: true });
   if (!student) throw new ApiError(404, "Student not found");
   return student;
 }
 
 export async function deleteStudent(id: string) {
   await connectDB();
-  const student = await Student.findByIdAndDelete(id);
+  const student = await Student.findOneAndDelete({ _id: id });
   if (!student) throw new ApiError(404, "Student not found");
 }
 
