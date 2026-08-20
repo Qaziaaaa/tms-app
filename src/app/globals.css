@@ -144,11 +144,10 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
   }
   .card-hover {
-    @apply transition-all duration-200;
+    @apply transition-shadow duration-200;
   }
   .card-hover:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
   }
   .gradient-primary {
     background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));

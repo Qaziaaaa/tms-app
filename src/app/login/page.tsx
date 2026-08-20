@@ -45,8 +45,9 @@ export default function LoginPage() {
   }
 
   function fillDemo(email: string, pass: string) {
-    const emailInput = document.getElementById("login-email") as HTMLInputElement;
-    const passInput = document.getElementById("login-password") as HTMLInputElement;
+    const prefix = role === "teacher" ? "login" : "student";
+    const emailInput = document.getElementById(`${prefix}-email`) as HTMLInputElement;
+    const passInput = document.getElementById(`${prefix}-password`) as HTMLInputElement;
     if (emailInput) { emailInput.value = email; emailInput.dispatchEvent(new Event("input", { bubbles: true })); }
     if (passInput) { passInput.value = pass; passInput.dispatchEvent(new Event("input", { bubbles: true })); }
     setFieldErrors({});

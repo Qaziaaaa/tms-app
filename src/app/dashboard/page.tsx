@@ -110,7 +110,7 @@ export default function DashboardPage() {
                 : stats.map((s) => (
                     <Card key={s.title} className="card-shadow card-hover group cursor-default">
                       <CardContent className="flex items-start gap-4 p-5">
-                        <div className={`rounded-xl p-3 transition-transform duration-200 group-hover:scale-110 ${s.color}`}>
+                        <div className={`rounded-xl p-3 ${s.color}`}>
                           <s.icon className="h-5 w-5" />
                         </div>
                         <div>
