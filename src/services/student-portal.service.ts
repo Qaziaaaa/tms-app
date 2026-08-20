@@ -1,39 +1,40 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { User, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 
 export async function getStudentProfile(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  await connectDB();
+
+  const user = await User.findById(userId).lean();
   if (!user) throw new ApiError(404, "User not found");
 
-  const student = await prisma.student.findFirst({
-    where: { userId },
-    include: { class: { select: { id: true, name: true, department: true, batch: true, schedule: true } } },
-  });
+  const student = await Student.findOne({ userId }).populate("classId", "name department batch schedule").lean();
   if (!student) throw new ApiError(404, "Student profile not found");
 
   return {
-    id: student.id,
+    id: student._id,
     name: student.name,
     email: user.email,
     rollNumber: student.rollNumber,
-    class: student.class,
+    class: student.classId,
   };
 }
 
 export async function getStudentAttendance(userId: string) {
-  const student = await prisma.student.findFirst({ where: { userId } });
+  await connectDB();
+
+  const student = await Student.findOne({ userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
-  const records = await prisma.attendanceRecord.findMany({
-    where: { studentId: student.id },
-    include: {
-      session: {
-        select: { id: true, date: true, class: { select: { name: true } } },
-      },
-    },
-    orderBy: { session: { date: "desc" } },
-  });
+  const records = await AttendanceRecord.find({ studentId: student._id })
+    .populate({
+      path: "sessionId",
+      select: "date classId",
+      populate: { path: "classId", select: "name" },
+    })
+    .sort({ "sessionId.date": -1 })
+    .lean();
 
   const presentCount = records.filter((r) => r.status === "PRESENT").length;
   const absentCount = records.filter((r) => r.status === "ABSENT").length;
@@ -48,50 +49,50 @@ export async function getStudentAttendance(userId: string) {
 }
 
 export async function getStudentAssignments(userId: string) {
-  const student = await prisma.student.findFirst({ where: { userId } });
+  await connectDB();
+
+  const student = await Student.findOne({ userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
-  const assignments = await prisma.assignment.findMany({
-    where: { classId: student.classId },
-    include: {
-      submissions: {
-        where: { studentId: student.id },
-        select: { id: true, status: true, marks: true },
-      },
-    },
-    orderBy: { dueDate: "desc" },
-  });
+  const assignments = await Assignment.find({ classId: student.classId })
+    .sort({ dueDate: -1 })
+    .lean();
+
+  const submissions = await AssignmentSubmission.find({
+    studentId: student._id,
+    assignmentId: { $in: assignments.map((a) => a._id) },
+  }).lean();
+
+  const submissionMap = new Map(submissions.map((s) => [String(s.assignmentId), s]));
 
   return assignments.map((a) => ({
-    id: a.id,
+    id: a._id,
     title: a.title,
     description: a.description,
     dueDate: a.dueDate,
     totalMarks: a.totalMarks,
-    submission: a.submissions[0] || null,
+    submission: submissionMap.get(String(a._id)) || null,
   }));
 }
 
 export async function getStudentGrades(userId: string) {
-  const student = await prisma.student.findFirst({ where: { userId } });
+  await connectDB();
+
+  const student = await Student.findOne({ userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
-  const assignments = await prisma.assignment.findMany({
-    where: { classId: student.classId },
-    orderBy: { dueDate: "desc" },
-  });
+  const assignments = await Assignment.find({ classId: student.classId })
+    .sort({ dueDate: -1 })
+    .lean();
 
-  const submissions = await prisma.assignmentSubmission.findMany({
-    where: { studentId: student.id },
-  });
-
-  const submissionMap = new Map(submissions.map((s) => [s.assignmentId, s]));
+  const submissions = await AssignmentSubmission.find({ studentId: student._id }).lean();
+  const submissionMap = new Map(submissions.map((s) => [String(s.assignmentId), s]));
 
   let totalMarksObtained = 0;
   let totalPossibleMarks = 0;
 
   const grades = assignments.map((a) => {
-    const sub = submissionMap.get(a.id);
+    const sub = submissionMap.get(String(a._id));
     const marks = sub?.marks ?? 0;
     totalMarksObtained += marks;
     totalPossibleMarks += a.totalMarks;
@@ -99,7 +100,7 @@ export async function getStudentGrades(userId: string) {
     const percentage = a.totalMarks > 0 ? Math.round((marks / a.totalMarks) * 100) : 0;
 
     return {
-      assignmentId: a.id,
+      assignmentId: a._id,
       title: a.title,
       dueDate: a.dueDate,
       totalMarks: a.totalMarks,
@@ -120,12 +121,14 @@ export async function getStudentGrades(userId: string) {
 }
 
 export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  await connectDB();
+
+  const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
 
   const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isValid) throw new ApiError(401, "Incorrect current password");
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  await User.findByIdAndUpdate(userId, { passwordHash });
 }

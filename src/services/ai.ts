@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -63,33 +64,28 @@ export interface ClassInsight {
 }
 
 async function getClassDataForAI(classId: string) {
-  const cls = await prisma.class.findUnique({ where: { id: classId } });
+  await connectDB();
+
+  const cls = await Class.findById(classId).lean();
   if (!cls) return null;
 
-  const students = await prisma.student.findMany({
-    where: { classId },
-    orderBy: { rollNumber: "asc" },
-  });
+  const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
 
-  const totalSessions = await prisma.attendanceSession.count({ where: { classId } });
-  const totalAssignments = await prisma.assignment.count({ where: { classId } });
+  const totalSessions = await AttendanceSession.countDocuments({ classId });
+  const totalAssignments = await Assignment.countDocuments({ classId });
 
   const studentData = await Promise.all(
     students.map(async (student) => {
-      const sessionsAttended = await prisma.attendanceRecord.count({
-        where: {
-          studentId: student.id,
-          session: { classId },
-          status: "PRESENT",
-        },
+      const sessionsAttended = await AttendanceRecord.countDocuments({
+        studentId: student._id,
+        session: { $in: (await AttendanceSession.find({ classId }).select("_id").lean()).map((s) => s._id) },
+        status: "PRESENT",
       });
 
-      const submissions = await prisma.assignmentSubmission.findMany({
-        where: {
-          studentId: student.id,
-          assignment: { classId },
-        },
-      });
+      const submissions = await AssignmentSubmission.find({
+        studentId: student._id,
+        assignmentId: { $in: (await Assignment.find({ classId }).select("_id").lean()).map((a) => a._id) },
+      }).lean();
 
       const submittedCount = submissions.filter(
         (s) => s.status === "SUBMITTED" || s.status === "LATE"
@@ -103,7 +99,7 @@ async function getClassDataForAI(classId: string) {
       const averageMarks = totalPossibleMarks > 0 ? Math.round((totalMarksObtained / totalPossibleMarks) * 100) : 0;
 
       return {
-        studentId: student.id,
+        studentId: String(student._id),
         name: student.name,
         rollNumber: student.rollNumber,
         attendancePercentage,
@@ -188,7 +184,7 @@ Return JSON with this exact structure:
     : 0;
 
   return {
-    classId: data.cls.id,
+    classId: String(data.cls._id),
     className: data.cls.name,
     totalStudents: data.students.length,
     averageAttendance: avgAttendance,

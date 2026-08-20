@@ -129,6 +129,31 @@
   }
 }
 
+@layer components {
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  }
+  .card-shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  }
+  .card-shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+  .card-hover {
+    @apply transition-all duration-200;
+  }
+  .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+  }
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
+  }
+  .gradient-success {
+    background: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(160, 84%, 39%));
+  }
+}
+
 @media (min-width: 1024px) {
   aside[data-slot="sidebar"],
   aside[data-open] {

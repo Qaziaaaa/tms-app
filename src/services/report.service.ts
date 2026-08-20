@@ -1,27 +1,27 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
+import { ApiError } from "@/lib/api-utils";
 
 export async function getAttendanceReport(classId: string) {
-  const students = await prisma.student.findMany({
-    where: { classId },
-    orderBy: { rollNumber: "asc" },
-  });
+  await connectDB();
 
-  const totalSessions = await prisma.attendanceSession.count({ where: { classId } });
+  const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
+  const sessions = await AttendanceSession.find({ classId }).select("_id").lean();
+  const totalSessions = sessions.length;
+  const sessionIds = sessions.map((s) => s._id);
 
   const studentStats = await Promise.all(
     students.map(async (student) => {
-      const presentCount = await prisma.attendanceRecord.count({
-        where: {
-          studentId: student.id,
-          session: { classId },
-          status: "PRESENT",
-        },
+      const presentCount = await AttendanceRecord.countDocuments({
+        studentId: student._id,
+        sessionId: { $in: sessionIds },
+        status: "PRESENT",
       });
       const attendancePercentage = totalSessions > 0
         ? Math.round((presentCount / totalSessions) * 100)
         : 0;
       return {
-        id: student.id,
+        id: student._id,
         rollNumber: student.rollNumber,
         name: student.name,
         totalSessions,
@@ -35,21 +35,17 @@ export async function getAttendanceReport(classId: string) {
 }
 
 export async function getSubmissionsReport(classId: string) {
-  const students = await prisma.student.findMany({
-    where: { classId },
-    orderBy: { rollNumber: "asc" },
-  });
+  await connectDB();
 
-  const assignments = await prisma.assignment.findMany({ where: { classId } });
+  const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
+  const assignments = await Assignment.find({ classId }).lean();
 
   const studentStats = await Promise.all(
     students.map(async (student) => {
-      const submissions = await prisma.assignmentSubmission.findMany({
-        where: {
-          studentId: student.id,
-          assignment: { classId },
-        },
-      });
+      const submissions = await AssignmentSubmission.find({
+        studentId: student._id,
+        assignmentId: { $in: assignments.map((a) => a._id) },
+      }).lean();
 
       const submittedCount = submissions.filter(
         (s) => s.status === "SUBMITTED" || s.status === "LATE"
@@ -63,7 +59,7 @@ export async function getSubmissionsReport(classId: string) {
         : 0;
 
       return {
-        id: student.id,
+        id: student._id,
         rollNumber: student.rollNumber,
         name: student.name,
         totalAssignments: assignments.length,
