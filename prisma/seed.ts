@@ -3,40 +3,37 @@ import bcrypt from "bcryptjs";
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/tms";
 
-const UserSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true, lowercase: true, trim: true },
-  passwordHash: String,
-  role: { type: String, enum: ["teacher", "student"], default: "teacher" },
-}, { timestamps: true });
-
-const ClassSchema = new mongoose.Schema({
-  name: String,
-  department: String,
-  batch: String,
-  schedule: String,
-}, { timestamps: true });
-
-const StudentSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-  email: { type: String, default: null },
-  rollNumber: String,
-  name: String,
-  classId: { type: mongoose.Schema.Types.ObjectId, ref: "Class" },
-}, { timestamps: true });
-
-const User = mongoose.model("User", UserSchema);
-const ClassModel = mongoose.model("Class", ClassSchema);
-const Student = mongoose.model("Student", StudentSchema);
-
 async function main() {
   await mongoose.connect(MONGODB_URI);
-  console.log("Connected to MongoDB");
+  console.log("Connected to MongoDB, clearing all collections...");
 
-  await User.deleteMany({});
-  await ClassModel.deleteMany({});
-  await Student.deleteMany({});
-  console.log("Cleared existing data");
+  const collections = await mongoose.connection.db!.listCollections().toArray();
+  for (const col of collections) {
+    await mongoose.connection.db!.dropCollection(col.name);
+  }
+  console.log("All collections dropped");
+
+  const User = mongoose.model("User", new mongoose.Schema({
+    name: String,
+    email: { type: String, unique: true, lowercase: true, trim: true },
+    passwordHash: String,
+    role: { type: String, enum: ["teacher", "student"], default: "teacher" },
+  }, { timestamps: true }));
+
+  const ClassModel = mongoose.model("Class", new mongoose.Schema({
+    name: String,
+    department: String,
+    batch: String,
+    schedule: String,
+  }, { timestamps: true }));
+
+  const Student = mongoose.model("Student", new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    email: { type: String, default: null },
+    rollNumber: String,
+    name: String,
+    classId: { type: mongoose.Schema.Types.ObjectId, ref: "Class" },
+  }, { timestamps: true }));
 
   const passwordHash = await bcrypt.hash("password123", 10);
 
@@ -46,7 +43,7 @@ async function main() {
     passwordHash,
     role: "teacher",
   });
-  console.log("Created teacher:", teacher.email);
+  console.log("Created teacher:", teacher.email, "id:", teacher._id);
 
   const seClass = await ClassModel.create({
     name: "Software Engineering",
@@ -113,12 +110,13 @@ async function main() {
     }
   }
 
-  console.log(`Seed complete: 1 teacher, ${studentCount} students, 3 classes`);
+  console.log(`Seed complete: 1 teacher (${teacher._id}), ${studentCount} students, 3 classes`);
+  console.log("Teacher login: teacher@tms.edu / password123");
+  console.log("Student login: ahmed@student.edu / password123");
   await mongoose.disconnect();
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

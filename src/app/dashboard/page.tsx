@@ -17,9 +17,9 @@ interface DashboardData {
   totalSessions: number;
   totalAssignments: number;
   recentAttendance: Array<{
-    id: string;
+    _id: string;
     date: string;
-    class: { name: string };
+    classId: { name: string };
     _count: { records: number };
   }>;
   classesWithStats: Array<{
@@ -41,8 +41,12 @@ export default function DashboardPage() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/dashboard")
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error("Failed to load dashboard");
+          return r.json();
+        })
         .then((json) => setData(json.data))
+        .catch(() => {})
         .finally(() => setLoading(false));
     }
   }, [status, router]);
@@ -129,9 +133,9 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground">No attendance sessions yet.</p>
               ) : (
                 data?.recentAttendance.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div key={s._id} className="flex items-center justify-between rounded-lg border p-3">
                     <div>
-                      <p className="font-medium">{s.class.name}</p>
+                      <p className="font-medium">{s.classId?.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(s.date).toLocaleDateString("en-US", {
                           weekday: "short",

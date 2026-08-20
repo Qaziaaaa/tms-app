@@ -6,10 +6,10 @@ import bcrypt from "bcryptjs";
 export async function getStudentProfile(userId: string) {
   await connectDB();
 
-  const user = await User.findById(userId).lean();
+  const user = await User.findOne({ _id: userId }).lean();
   if (!user) throw new ApiError(404, "User not found");
 
-  const student = await Student.findOne({ userId }).populate("classId", "name department batch schedule").lean();
+  const student = await Student.findOne({ userId: userId }).populate("classId", "name department batch schedule").lean();
   if (!student) throw new ApiError(404, "Student profile not found");
 
   return {
@@ -24,7 +24,7 @@ export async function getStudentProfile(userId: string) {
 export async function getStudentAttendance(userId: string) {
   await connectDB();
 
-  const student = await Student.findOne({ userId }).lean();
+  const student = await Student.findOne({ userId: userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
   const records = await AttendanceRecord.find({ studentId: student._id })
@@ -51,7 +51,7 @@ export async function getStudentAttendance(userId: string) {
 export async function getStudentAssignments(userId: string) {
   await connectDB();
 
-  const student = await Student.findOne({ userId }).lean();
+  const student = await Student.findOne({ userId: userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
   const assignments = await Assignment.find({ classId: student.classId })
@@ -78,7 +78,7 @@ export async function getStudentAssignments(userId: string) {
 export async function getStudentGrades(userId: string) {
   await connectDB();
 
-  const student = await Student.findOne({ userId }).lean();
+  const student = await Student.findOne({ userId: userId }).lean();
   if (!student) throw new ApiError(404, "Student not found");
 
   const assignments = await Assignment.find({ classId: student.classId })
@@ -96,9 +96,7 @@ export async function getStudentGrades(userId: string) {
     const marks = sub?.marks ?? 0;
     totalMarksObtained += marks;
     totalPossibleMarks += a.totalMarks;
-
     const percentage = a.totalMarks > 0 ? Math.round((marks / a.totalMarks) * 100) : 0;
-
     return {
       assignmentId: a._id,
       title: a.title,
@@ -123,12 +121,12 @@ export async function getStudentGrades(userId: string) {
 export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
   await connectDB();
 
-  const user = await User.findById(userId);
+  const user = await User.findOne({ _id: userId });
   if (!user) throw new ApiError(404, "User not found");
 
   const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isValid) throw new ApiError(401, "Incorrect current password");
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await User.findByIdAndUpdate(userId, { passwordHash });
+  await User.findOneAndUpdate({ _id: userId }, { passwordHash });
 }
