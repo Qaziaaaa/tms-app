@@ -13,13 +13,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { GraduationCap } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GraduationCap, BookOpen } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<"teacher" | "student">("teacher");
 
   if (status === "authenticated" && session?.user) {
     if (session.user.role === "student") {
@@ -51,9 +53,9 @@ export default function LoginPage() {
       } else {
         const res = await fetch("/api/auth/session");
         const sessionData = await res.json();
-        const role = sessionData?.user?.role;
+        const userRole = sessionData?.user?.role;
 
-        if (role === "student") {
+        if (userRole === "student") {
           router.push("/student/dashboard");
         } else {
           router.push("/dashboard");
@@ -76,47 +78,108 @@ export default function LoginPage() {
               <GraduationCap className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Teacher Management System</CardTitle>
+          <CardTitle className="text-2xl font-bold">TMS</CardTitle>
           <CardDescription>
-            Sign in to your account to continue
+            Sign in to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+          <Tabs value={role} onValueChange={(v) => { setRole(v as "teacher" | "student"); setError(null); }}>
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="teacher" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                Teacher
+              </TabsTrigger>
+              <TabsTrigger value="student" className="gap-2">
+                <GraduationCap className="h-4 w-4" />
+                Student
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                required
-                autoComplete="email"
-              />
-            </div>
+            <TabsContent value="teacher">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="••••••••"
-                required
-                autoComplete="current-password"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="teacher@tms.edu"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In as Teacher"}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground">
+                  Demo: teacher@tms.edu / password123
+                </p>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="student">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="student-email">Email</Label>
+                  <Input
+                    id="student-email"
+                    name="email"
+                    type="email"
+                    placeholder="ahmed@student.edu"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="student-password">Password</Label>
+                  <Input
+                    id="student-password"
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    autoComplete="current-password"
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Signing in..." : "Sign In as Student"}
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground">
+                  Demo: ahmed@student.edu / password123
+                </p>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
