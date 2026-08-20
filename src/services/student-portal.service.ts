@@ -3,29 +3,34 @@ import { User, Student, AttendanceSession, AttendanceRecord, Assignment, Assignm
 import { ApiError } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 
-export async function getStudentProfile(userId: string) {
-  await connectDB();
-
-  const user = await User.findOne({ _id: userId }).lean();
+async function findStudentByEmail(email: string) {
+  const user = await User.findOne({ email }).lean();
   if (!user) throw new ApiError(404, "User not found");
-
-  const student = await Student.findOne({ userId: userId }).populate("classId", "name department batch schedule").lean();
+  const student = await Student.findOne({ userId: String(user._id) }).lean();
   if (!student) throw new ApiError(404, "Student profile not found");
+  return { user, student };
+}
+
+export async function getStudentProfile(email: string) {
+  await connectDB();
+  const { user, student } = await findStudentByEmail(email);
+
+  const classDoc = await import("@/models").then((m) =>
+    m.Class.findOne({ _id: student.classId }).lean()
+  );
 
   return {
     id: student._id,
     name: student.name,
     email: user.email,
     rollNumber: student.rollNumber,
-    class: student.classId,
+    class: classDoc,
   };
 }
 
-export async function getStudentAttendance(userId: string) {
+export async function getStudentAttendance(email: string) {
   await connectDB();
-
-  const student = await Student.findOne({ userId: userId }).lean();
-  if (!student) throw new ApiError(404, "Student not found");
+  const { student } = await findStudentByEmail(email);
 
   const records = await AttendanceRecord.find({ studentId: student._id })
     .populate({
@@ -48,11 +53,9 @@ export async function getStudentAttendance(userId: string) {
   };
 }
 
-export async function getStudentAssignments(userId: string) {
+export async function getStudentAssignments(email: string) {
   await connectDB();
-
-  const student = await Student.findOne({ userId: userId }).lean();
-  if (!student) throw new ApiError(404, "Student not found");
+  const { student } = await findStudentByEmail(email);
 
   const assignments = await Assignment.find({ classId: student.classId })
     .sort({ dueDate: -1 })
@@ -75,11 +78,9 @@ export async function getStudentAssignments(userId: string) {
   }));
 }
 
-export async function getStudentGrades(userId: string) {
+export async function getStudentGrades(email: string) {
   await connectDB();
-
-  const student = await Student.findOne({ userId: userId }).lean();
-  if (!student) throw new ApiError(404, "Student not found");
+  const { student } = await findStudentByEmail(email);
 
   const assignments = await Assignment.find({ classId: student.classId })
     .sort({ dueDate: -1 })
@@ -118,15 +119,16 @@ export async function getStudentGrades(userId: string) {
   };
 }
 
-export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+export async function changePassword(email: string, currentPassword: string, newPassword: string) {
   await connectDB();
 
-  const user = await User.findOne({ _id: userId });
+  const user = await User.findOne({ email });
   if (!user) throw new ApiError(404, "User not found");
 
   const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isValid) throw new ApiError(401, "Incorrect current password");
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await User.findOneAndUpdate({ _id: userId }, { passwordHash });
+  user.passwordHash = passwordHash;
+  await user.save();
 }

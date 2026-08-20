@@ -7,6 +7,6 @@ export const GET = asyncHandler(async (request: NextRequest) => {
   const auth = await requireRole(request, "student");
   if ("error" in auth) return auth.error;
 
-  const data = await getStudentGrades(auth.userId);
+  const data = await getStudentGrades(auth.email);
   return sendSuccess(data, "Grades retrieved successfully");
 });

@@ -7,6 +7,6 @@ export const GET = asyncHandler(async (request: NextRequest) => {
   const auth = await requireRole(request, "student");
   if ("error" in auth) return auth.error;
 
-  const assignments = await getStudentAssignments(auth.userId);
+  const assignments = await getStudentAssignments(auth.email);
   return sendSuccess(assignments, "Assignments retrieved successfully");
 });
