@@ -1,0 +1,311 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, Trash2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { toast } from "sonner";
+
+interface ClassItem { id: string; name: string; department: string; }
+interface Session { id: string; date: string; _count: { records: number }; }
+interface Student { id: string; rollNumber: string; name: string; }
+interface RecordItem { studentId: string; status: string; }
+
+function AttendanceContent() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedClass = searchParams.get("classId") || "";
+
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState(preselectedClass);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [records, setRecords] = useState<RecordItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/login");
+    if (status === "authenticated") {
+      fetch("/api/classes").then(r => r.json()).then((json) => {
+        const data = json.data as ClassItem[];
+        setClasses(data);
+        setLoading(false);
+        if (preselectedClass) setSelectedClassId(preselectedClass);
+        else if (data.length > 0) setSelectedClassId(data[0].id);
+      });
+    }
+  }, [status, router, preselectedClass]);
+
+  useEffect(() => {
+    if (selectedClassId) {
+      setLoadingSessions(true);
+      setActiveSession(null);
+      setRecords([]);
+      Promise.all([
+        fetch(`/api/attendance/sessions?classId=${selectedClassId}`).then(r => r.json()),
+        fetch(`/api/students?classId=${selectedClassId}&pageSize=200`).then(r => r.json()),
+      ]).then(([sessJson, studJson]) => {
+        setSessions(sessJson.data || []);
+        setStudents((studJson.data.students || []).map((s: Student) => ({ id: s.id, rollNumber: s.rollNumber, name: s.name })));
+        setLoadingSessions(false);
+      });
+    }
+  }, [selectedClassId]);
+
+  async function createSession() {
+    if (!selectedClassId) return;
+    const res = await fetch("/api/attendance/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ classId: selectedClassId, date: new Date().toISOString() }),
+    });
+    if (res.ok) {
+      const s = await res.json();
+      toast.success("Session created");
+      selectSession(s);
+      fetchSessions();
+    } else {
+      const data = await res.json();
+      toast.error(data.error || "Failed to create session");
+    }
+  }
+
+  async function fetchSessions() {
+    if (!selectedClassId) return;
+    const res = await fetch(`/api/attendance/sessions?classId=${selectedClassId}`);
+    if (res.ok) {
+      const json = await res.json();
+      setSessions(json.data || []);
+    }
+  }
+
+  async function selectSession(s: Session) {
+    setActiveSession(s);
+    const res = await fetch(`/api/attendance/sessions/${s.id}`);
+    if (res.ok) {
+      const json = await res.json();
+      const existing: RecordItem[] = (json.data.records || []).map((r: { studentId: string; status: string }) => ({
+        studentId: r.studentId,
+        status: r.status,
+      }));
+      setRecords(existing);
+    } else {
+      setRecords(students.map(st => ({ studentId: st.id, status: "PRESENT" })));
+    }
+  }
+
+  function markAll(status: string) {
+    setRecords(students.map(s => ({ studentId: s.id, status })));
+  }
+
+  function toggleStatus(studentId: string, status: string) {
+    setRecords(prev => {
+      const existing = prev.find(r => r.studentId === studentId);
+      if (existing) return prev.map(r => r.studentId === studentId ? { ...r, status } : r);
+      return [...prev, { studentId, status }];
+    });
+  }
+
+  async function saveAttendance() {
+    if (!activeSession) return;
+    setSaving(true);
+    const res = await fetch("/api/attendance/records", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: activeSession.id, records }),
+    });
+    if (res.ok) { toast.success("Attendance saved"); }
+    else { toast.error("Failed to save attendance"); }
+    setSaving(false);
+  }
+
+  async function deleteSession() {
+    if (!deleteId) return;
+    const res = await fetch(`/api/attendance/sessions/${deleteId}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Session deleted");
+      if (activeSession?.id === deleteId) { setActiveSession(null); setRecords([]); }
+      fetchSessions();
+    }
+    setDeleteId(null);
+  }
+
+  function getStatusFor(studentId: string): string {
+    return records.find(r => r.studentId === studentId)?.status || "PRESENT";
+  }
+
+  if (status === "loading" || !session?.user) {
+    return <div className="flex min-h-screen items-center justify-center"><Skeleton className="h-8 w-48" /></div>;
+  }
+
+  return (
+    <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Attendance</h1>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {loading ? <Skeleton className="h-10 w-64" /> : (
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
+            </select>
+          )}
+          <Button onClick={createSession} disabled={!selectedClassId}>
+            <Plus className="mr-2 h-4 w-4" /> New Session
+          </Button>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Sessions</CardTitle></CardHeader>
+              <CardContent className="space-y-2 max-h-[500px] overflow-auto">
+                {loadingSessions ? (
+                  Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)
+                ) : sessions.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">No sessions yet. Create one to start.</p>
+                ) : (
+                  sessions.map(s => (
+                    <div
+                      key={s.id}
+                      className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${activeSession?.id === s.id ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+                      onClick={() => selectSession(s)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {new Date(s.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{s._count.records} records</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(s.id); }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">
+                    {activeSession
+                      ? new Date(activeSession.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+                      : "Select a session"}
+                  </CardTitle>
+                  {activeSession && (
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")}>All Present</Button>
+                      <Button size="sm" onClick={saveAttendance} disabled={saving}>
+                        {saving ? "Saving..." : "Save Attendance"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!activeSession ? (
+                  <p className="py-12 text-center text-muted-foreground">Select a session or create a new one to mark attendance.</p>
+                ) : students.length === 0 ? (
+                  <p className="py-12 text-center text-muted-foreground">No students in this class.</p>
+                ) : (
+                  <div className="max-h-[400px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Roll</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="text-right">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {students.map(s => {
+                          const st = getStatusFor(s.id);
+                          return (
+                            <TableRow key={s.id}>
+                              <TableCell><Badge variant="outline">{s.rollNumber}</Badge></TableCell>
+                              <TableCell className="font-medium">{s.name}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant={st === "PRESENT" ? "default" : "outline"}
+                                    className={st === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""}
+                                    onClick={() => toggleStatus(s.id, "PRESENT")}
+                                  >
+                                    <CheckCircle2 className="mr-1 h-3 w-3" /> P
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant={st === "ABSENT" ? "default" : "outline"}
+                                    className={st === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}
+                                    onClick={() => toggleStatus(s.id, "ABSENT")}
+                                  >
+                                    <XCircle className="mr-1 h-3 w-3" /> A
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant={st === "LATE" ? "default" : "outline"}
+                                    className={st === "LATE" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
+                                    onClick={() => toggleStatus(s.id, "LATE")}
+                                  >
+                                    <Clock className="mr-1 h-3 w-3" /> L
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete session?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete this attendance session and all its records.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteSession} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppShell>
+  );
+}
+
+export default function AttendancePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Skeleton className="h-8 w-48" /></div>}>
+      <AttendanceContent />
+    </Suspense>
+  );
+}
