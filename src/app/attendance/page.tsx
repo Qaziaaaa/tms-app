@@ -154,7 +154,10 @@ function AttendanceContent() {
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Attendance</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Attendance</h1>
+            <p className="text-muted-foreground mt-0.5">Create sessions and track student attendance in real-time</p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -174,7 +177,7 @@ function AttendanceContent() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg">Sessions</CardTitle></CardHeader>
               <CardContent className="space-y-2 max-h-[500px] overflow-auto">
                 {loadingSessions ? (
@@ -205,7 +208,7 @@ function AttendanceContent() {
           </div>
 
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="card-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">

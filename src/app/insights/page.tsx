@@ -97,9 +97,12 @@ export default function InsightsPage() {
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Brain className="h-6 w-6 text-purple-600" />
-          <h1 className="text-2xl font-bold">AI Insights</h1>
+        <div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-6 w-6 text-purple-600" />
+            <h1 className="text-2xl font-bold tracking-tight">AI Insights</h1>
+          </div>
+          <p className="text-muted-foreground mt-0.5 ml-8">AI-powered student risk analysis and performance predictions</p>
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
@@ -120,45 +123,53 @@ export default function InsightsPage() {
         ) : insights ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <Card>
+              <Card className="card-shadow card-hover">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <ShieldCheck className="h-8 w-8 text-green-600" />
+                  <div className="rounded-xl bg-green-500/10 p-3">
+                    <ShieldCheck className="h-6 w-6 text-green-600" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Avg Attendance</p>
-                    <p className="text-2xl font-bold">{insights.averageAttendance}%</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Attendance</p>
+                    <p className="text-2xl font-bold mt-0.5">{insights.averageAttendance}%</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="card-shadow card-hover">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <TrendingDown className="h-8 w-8 text-blue-600" />
+                  <div className="rounded-xl bg-blue-500/10 p-3">
+                    <TrendingDown className="h-6 w-6 text-blue-600" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Avg Submission Rate</p>
-                    <p className="text-2xl font-bold">{insights.averageSubmissionRate}%</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Submission Rate</p>
+                    <p className="text-2xl font-bold mt-0.5">{insights.averageSubmissionRate}%</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="card-shadow card-hover">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <AlertTriangle className="h-8 w-8 text-yellow-500" />
+                  <div className="rounded-xl bg-yellow-500/10 p-3">
+                    <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">At-Risk Students</p>
-                    <p className="text-2xl font-bold">{insights.atRiskStudents}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">At-Risk Students</p>
+                    <p className="text-2xl font-bold mt-0.5">{insights.atRiskStudents}</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="card-shadow card-hover">
                 <CardContent className="flex items-center gap-3 p-4">
-                  <Brain className="h-8 w-8 text-purple-600" />
+                  <div className="rounded-xl bg-purple-500/10 p-3">
+                    <Brain className="h-6 w-6 text-purple-600" />
+                  </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Students</p>
-                    <p className="text-2xl font-bold">{insights.totalStudents}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Students</p>
+                    <p className="text-2xl font-bold mt-0.5">{insights.totalStudents}</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card>
+            <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Brain className="h-5 w-5 text-purple-600" /> AI Analysis</CardTitle></CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -176,7 +187,7 @@ export default function InsightsPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg">Student Risk Analysis</CardTitle></CardHeader>
               <CardContent>
                 <div className="max-h-[500px] overflow-auto">
@@ -212,9 +223,9 @@ export default function InsightsPage() {
             </Card>
           </>
         ) : (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Select a class and click "Refresh Analysis" to get AI insights.
+          <Card className="card-shadow">
+            <CardContent className="py-16 text-center text-muted-foreground">
+              Select a class and click &quot;Refresh Analysis&quot; to get AI insights.
             </CardContent>
           </Card>
         )}

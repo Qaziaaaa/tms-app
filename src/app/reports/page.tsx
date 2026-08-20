@@ -65,9 +65,12 @@ export default function ReportsPage() {
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Reports</h1>
+        <div>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-6 w-6" />
+            <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+          </div>
+          <p className="text-muted-foreground mt-0.5 ml-8">View attendance and submission reports for your classes</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -92,7 +95,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <Card>
+        <Card className="card-shadow">
           <CardHeader>
             <CardTitle className="text-lg">
               {reportType === "attendance" ? "Attendance Report" : "Submissions Report"}
