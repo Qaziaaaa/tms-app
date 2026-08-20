@@ -28,8 +28,8 @@ async function main() {
   }, { timestamps: true }));
 
   const Student = mongoose.model("Student", new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    email: { type: String, default: null },
+    userId: { type: String, default: null },
+    email: { type: String, default: null, lowercase: true, trim: true },
     rollNumber: String,
     name: String,
     classId: { type: mongoose.Schema.Types.ObjectId, ref: "Class" },
@@ -103,7 +103,7 @@ async function main() {
         rollNumber: s.rollNumber,
         name: s.name,
         classId,
-        userId: user._id,
+        userId: String(user._id),
         email: s.email,
       });
       studentCount++;

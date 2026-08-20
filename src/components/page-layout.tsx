@@ -25,7 +25,7 @@ export function StatCard({ title, value, icon, detail, loading, className, trend
   return (
     <Card className={cn("card-shadow card-hover group", className)}>
       <CardContent className="flex items-start gap-4 p-5">
-        <div className={cn("rounded-xl p-3 transition-transform duration-200 group-hover:scale-110", iconBg || "bg-primary/10")}>
+        <div className={cn("rounded-xl p-3", iconBg || "bg-primary/10")}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
