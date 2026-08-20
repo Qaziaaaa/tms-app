@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { asyncHandler, ApiError, sendSuccess } from "@/lib/api-utils";
+import { saveSubmissions } from "@/services/assignment.service";
 import { saveSubmissionsSchema } from "@/lib/validations";
 
 export const POST = asyncHandler(async (request: NextRequest, context) => {
@@ -15,27 +15,6 @@ export const POST = asyncHandler(async (request: NextRequest, context) => {
     throw new ApiError(400, "Validation failed", Object.values(parsed.error.flatten().fieldErrors).flat());
   }
 
-  const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId } });
-  if (!assignment) {
-    throw new ApiError(404, "Assignment not found");
-  }
-
-  const { submissions } = parsed.data;
-
-  const upserts = submissions.map((sub) =>
-    prisma.assignmentSubmission.upsert({
-      where: { assignmentId_studentId: { assignmentId, studentId: sub.studentId } },
-      update: { status: sub.status, marks: sub.marks ?? null },
-      create: { assignmentId, studentId: sub.studentId, status: sub.status, marks: sub.marks ?? null },
-    })
-  );
-
-  await Promise.all(upserts);
-
-  const updated = await prisma.assignment.findUnique({
-    where: { id: assignmentId },
-    include: { submissions: true },
-  });
-
+  const updated = await saveSubmissions(assignmentId, parsed.data.submissions);
   return sendSuccess(updated, "Submissions saved successfully");
 });
