@@ -1,20 +1,31 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { Class } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 
 export async function getClasses() {
-  return prisma.class.findMany({
-    include: { _count: { select: { students: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  await connectDB();
+  const classes = await Class.find().sort({ createdAt: -1 }).lean();
+  const Student = (await import("@/models")).Student;
+
+  const classesWithCount = await Promise.all(
+    classes.map(async (cls) => {
+      const studentCount = await Student.countDocuments({ classId: cls._id });
+      return { ...cls, studentCount };
+    })
+  );
+
+  return classesWithCount;
 }
 
 export async function getClassById(id: string) {
-  const cls = await prisma.class.findUnique({
-    where: { id },
-    include: { students: { orderBy: { rollNumber: "asc" } } },
-  });
+  await connectDB();
+  const cls = await Class.findById(id).lean();
   if (!cls) throw new ApiError(404, "Class not found");
-  return cls;
+
+  const Student = (await import("@/models")).Student;
+  const students = await Student.find({ classId: id }).sort({ rollNumber: "asc" }).lean();
+
+  return { ...cls, students };
 }
 
 export async function createClass(data: {
@@ -23,7 +34,8 @@ export async function createClass(data: {
   batch: string;
   schedule?: string;
 }) {
-  return prisma.class.create({ data });
+  await connectDB();
+  return Class.create(data);
 }
 
 export async function updateClass(id: string, data: {
@@ -32,13 +44,14 @@ export async function updateClass(id: string, data: {
   batch?: string;
   schedule?: string;
 }) {
-  const existing = await prisma.class.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, "Class not found");
-  return prisma.class.update({ where: { id }, data });
+  await connectDB();
+  const cls = await Class.findByIdAndUpdate(id, data, { new: true });
+  if (!cls) throw new ApiError(404, "Class not found");
+  return cls;
 }
 
 export async function deleteClass(id: string) {
-  const existing = await prisma.class.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, "Class not found");
-  await prisma.class.delete({ where: { id } });
+  await connectDB();
+  const cls = await Class.findByIdAndDelete(id);
+  if (!cls) throw new ApiError(404, "Class not found");
 }

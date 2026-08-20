@@ -1,7 +1,8 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { User } from "@/models";
 
 declare module "next-auth" {
   interface Session {
@@ -35,9 +36,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
-        });
+        await connectDB();
+        const user = await User.findOne({ email: credentials.email as string }).lean();
 
         if (!user) return null;
 
@@ -49,7 +49,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!isValid) return null;
 
         return {
-          id: user.id,
+          id: String(user._id),
           name: user.name,
           email: user.email,
           role: user.role,

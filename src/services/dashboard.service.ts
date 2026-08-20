@@ -1,50 +1,54 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { Class, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
 
 export async function getDashboard() {
+  await connectDB();
+
   const [totalClasses, totalStudents, totalSessions, totalAssignments] = await Promise.all([
-    prisma.class.count(),
-    prisma.student.count(),
-    prisma.attendanceSession.count(),
-    prisma.assignment.count(),
+    Class.countDocuments(),
+    Student.countDocuments(),
+    AttendanceSession.countDocuments(),
+    Assignment.countDocuments(),
   ]);
 
-  const recentAttendance = await prisma.attendanceSession.findMany({
-    take: 5,
-    orderBy: { date: "desc" },
-    include: {
-      _count: { select: { records: true } },
-      class: { select: { name: true } },
-    },
-  });
+  const recentSessions = await AttendanceSession.find()
+    .populate("classId", "name")
+    .sort({ date: -1 })
+    .limit(5)
+    .lean();
 
-  const classes = await prisma.class.findMany({
-    include: { students: { select: { id: true } } },
-  });
+  const recentAttendance = await Promise.all(
+    recentSessions.map(async (session) => {
+      const recordCount = await AttendanceRecord.countDocuments({ sessionId: session._id });
+      return { ...session, _count: { records: recordCount } };
+    })
+  );
+
+  const classes = await Class.find().lean();
 
   const classesWithStats = await Promise.all(
     classes.map(async (cls) => {
-      const sessionCount = await prisma.attendanceSession.count({
-        where: { classId: cls.id },
-      });
+      const studentCount = await Student.countDocuments({ classId: cls._id });
+      const sessionCount = await AttendanceSession.countDocuments({ classId: cls._id });
 
       let averageAttendance = 0;
-      if (sessionCount > 0 && cls.students.length > 0) {
-        const presentCount = await prisma.attendanceRecord.count({
-          where: {
-            session: { classId: cls.id },
-            status: "PRESENT",
-          },
+      if (sessionCount > 0 && studentCount > 0) {
+        const sessions = await AttendanceSession.find({ classId: cls._id }).select("_id").lean();
+        const sessionIds = sessions.map((s) => s._id);
+        const presentCount = await AttendanceRecord.countDocuments({
+          sessionId: { $in: sessionIds },
+          status: "PRESENT",
         });
-        const totalPossible = sessionCount * cls.students.length;
+        const totalPossible = sessionCount * studentCount;
         averageAttendance = totalPossible > 0
           ? Math.round((presentCount / totalPossible) * 100)
           : 0;
       }
 
       return {
-        id: cls.id,
+        id: cls._id,
         name: cls.name,
-        studentCount: cls.students.length,
+        studentCount,
         sessionCount,
         averageAttendance,
       };

@@ -1,56 +1,56 @@
-import { prisma } from "@/lib/prisma";
+import { connectDB } from "@/lib/db";
+import { Student } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 
 export async function getStudents(classId: string | null, page: number, pageSize: number) {
+  await connectDB();
+  const filter: Record<string, unknown> = classId ? { classId } : {};
   const skip = (page - 1) * pageSize;
-  const where = classId ? { classId } : {};
 
   const [students, total] = await Promise.all([
-    prisma.student.findMany({
-      where,
-      include: { class: { select: { name: true } } },
-      orderBy: { rollNumber: "asc" },
-      skip,
-      take: pageSize,
-    }),
-    prisma.student.count({ where }),
+    Student.find(filter)
+      .populate("classId", "name")
+      .sort({ rollNumber: "asc" })
+      .skip(skip)
+      .limit(pageSize)
+      .lean(),
+    Student.countDocuments(filter),
   ]);
 
   return { students, total, page, pageSize };
 }
 
 export async function getStudentById(id: string) {
-  const student = await prisma.student.findUnique({
-    where: { id },
-    include: { class: true },
-  });
+  await connectDB();
+  const student = await Student.findById(id).populate("classId").lean();
   if (!student) throw new ApiError(404, "Student not found");
   return student;
 }
 
 export async function createStudent(data: { rollNumber: string; name: string; classId: string }) {
-  return prisma.student.create({ data });
+  await connectDB();
+  return Student.create(data);
 }
 
 export async function updateStudent(id: string, data: { rollNumber?: string; name?: string; classId?: string }) {
-  const existing = await prisma.student.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, "Student not found");
-  return prisma.student.update({ where: { id }, data });
+  await connectDB();
+  const student = await Student.findByIdAndUpdate(id, data, { new: true });
+  if (!student) throw new ApiError(404, "Student not found");
+  return student;
 }
 
 export async function deleteStudent(id: string) {
-  const existing = await prisma.student.findUnique({ where: { id } });
-  if (!existing) throw new ApiError(404, "Student not found");
-  await prisma.student.delete({ where: { id } });
+  await connectDB();
+  const student = await Student.findByIdAndDelete(id);
+  if (!student) throw new ApiError(404, "Student not found");
 }
 
 export async function bulkImportStudents(classId: string, students: { rollNumber: string; name: string }[]) {
+  await connectDB();
   let created = 0;
   for (const s of students) {
     try {
-      await prisma.student.create({
-        data: { rollNumber: s.rollNumber, name: s.name, classId },
-      });
+      await Student.create({ rollNumber: s.rollNumber, name: s.name, classId });
       created++;
     } catch {
       // Skip duplicates
