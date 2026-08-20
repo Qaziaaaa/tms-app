@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { asyncHandler, ApiError, sendSuccess } from "@/lib/api-utils";
+import { bulkImportStudents } from "@/services/student.service";
 import { bulkStudentSchema } from "@/lib/validations";
 
 export const POST = asyncHandler(async (request: NextRequest) => {
@@ -15,18 +15,6 @@ export const POST = asyncHandler(async (request: NextRequest) => {
   }
 
   const { classId, students } = parsed.data;
-
-  let created = 0;
-  for (const s of students) {
-    try {
-      await prisma.student.create({
-        data: { rollNumber: s.rollNumber, name: s.name, classId },
-      });
-      created++;
-    } catch {
-      // Skip duplicates silently
-    }
-  }
-
-  return sendSuccess({ created }, "Bulk import completed", 201);
+  const result = await bulkImportStudents(classId, students);
+  return sendSuccess(result, "Bulk import completed", 201);
 });

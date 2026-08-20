@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { asyncHandler, ApiError, sendSuccess } from "@/lib/api-utils";
+import { saveAttendance } from "@/services/attendance.service";
 import { saveAttendanceSchema } from "@/lib/validations";
 
 export const POST = asyncHandler(async (request: NextRequest) => {
@@ -15,26 +15,6 @@ export const POST = asyncHandler(async (request: NextRequest) => {
   }
 
   const { sessionId, records } = parsed.data;
-
-  const session = await prisma.attendanceSession.findUnique({ where: { id: sessionId } });
-  if (!session) {
-    throw new ApiError(404, "Session not found");
-  }
-
-  const upserts = records.map((record) =>
-    prisma.attendanceRecord.upsert({
-      where: { sessionId_studentId: { sessionId, studentId: record.studentId } },
-      update: { status: record.status },
-      create: { sessionId, studentId: record.studentId, status: record.status },
-    })
-  );
-
-  await Promise.all(upserts);
-
-  const updated = await prisma.attendanceSession.findUnique({
-    where: { id: sessionId },
-    include: { records: true },
-  });
-
+  const updated = await saveAttendance(sessionId, records);
   return sendSuccess(updated, "Attendance saved successfully");
 });

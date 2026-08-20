@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import { asyncHandler, ApiError, sendSuccess } from "@/lib/api-utils";
+import { getAssignments, createAssignment } from "@/services/assignment.service";
 import { createAssignmentSchema } from "@/lib/validations";
 
 export const GET = asyncHandler(async (request: NextRequest) => {
@@ -11,14 +11,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const classId = searchParams.get("classId");
 
-  const where = classId ? { classId } : {};
-
-  const assignments = await prisma.assignment.findMany({
-    where,
-    include: { _count: { select: { submissions: true } } },
-    orderBy: { dueDate: "desc" },
-  });
-
+  const assignments = await getAssignments(classId);
   return sendSuccess(assignments, "Assignments retrieved successfully");
 });
 
@@ -32,26 +25,6 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     throw new ApiError(400, "Validation failed", Object.values(parsed.error.flatten().fieldErrors).flat());
   }
 
-  const { classId, title, description, dueDate, totalMarks } = parsed.data;
-
-  const students = await prisma.student.findMany({
-    where: { classId },
-    select: { id: true },
-  });
-
-  const assignment = await prisma.assignment.create({
-    data: {
-      classId,
-      title,
-      description,
-      dueDate: new Date(dueDate),
-      totalMarks,
-      submissions: {
-        create: students.map((s) => ({ studentId: s.id, status: "NOT_SUBMITTED" })),
-      },
-    },
-    include: { submissions: true },
-  });
-
+  const assignment = await createAssignment(parsed.data);
   return sendSuccess(assignment, "Assignment created successfully", 201);
 });

@@ -12,6 +12,7 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("teacher")
+  student      Student?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -35,10 +36,13 @@ model Class {
 
 model Student {
   id         String  @id @default(cuid())
+  userId     String? @unique
+  email      String? @unique
   rollNumber String
   name       String
   classId    String
 
+  user               User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
   class              Class                 @relation(fields: [classId], references: [id], onDelete: Cascade)
   attendanceRecords  AttendanceRecord[]
   submissions        AssignmentSubmission[]
