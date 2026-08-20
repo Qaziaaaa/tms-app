@@ -141,7 +141,10 @@ export default function StudentsPage() {
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Students</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Students</h1>
+            <p className="text-muted-foreground mt-0.5">Add, edit, and manage students across your classes</p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -163,7 +166,7 @@ export default function StudentsPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg">Student List</CardTitle></CardHeader>
               <CardContent>
                 {loadingStudents ? (
@@ -202,7 +205,7 @@ export default function StudentsPage() {
           </div>
 
           <div>
-            <Card>
+            <Card className="card-shadow">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2"><Upload className="h-4 w-4" /> CSV Import</CardTitle>
               </CardHeader>

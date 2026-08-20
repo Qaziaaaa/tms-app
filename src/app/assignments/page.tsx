@@ -152,7 +152,10 @@ export default function AssignmentsPage() {
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Assignments</h1>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Assignments</h1>
+            <p className="text-muted-foreground mt-0.5">Create assignments and manage student submissions</p>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -166,7 +169,7 @@ export default function AssignmentsPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg">Assignments</CardTitle></CardHeader>
               <CardContent className="space-y-2 max-h-[500px] overflow-auto">
                 {loadingAssignments ? (
@@ -192,7 +195,7 @@ export default function AssignmentsPage() {
           </div>
 
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="card-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{activeAssignment ? activeAssignment.title : "Select an assignment"}</CardTitle>

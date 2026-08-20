@@ -9,19 +9,23 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, BookOpen } from "lucide-react";
+import { GraduationCap, BookOpen, Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<"teacher" | "student">("teacher");
+  const [showPassword, setShowPassword] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
@@ -30,14 +34,36 @@ export default function LoginPage() {
     }
   }, [status, session, router]);
 
+  function validate(email: string, password: string) {
+    const errors: { email?: string; password?: string } = {};
+    if (!email) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email";
+    if (!password) errors.password = "Password is required";
+    else if (password.length < 6) errors.password = "Password must be at least 6 characters";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
+  function fillDemo(email: string, pass: string) {
+    const emailInput = document.getElementById("login-email") as HTMLInputElement;
+    const passInput = document.getElementById("login-password") as HTMLInputElement;
+    if (emailInput) { emailInput.value = email; emailInput.dispatchEvent(new Event("input", { bubbles: true })); }
+    if (passInput) { passInput.value = pass; passInput.dispatchEvent(new Event("input", { bubbles: true })); }
+    setFieldErrors({});
+    setError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+
+    if (!validate(email, password)) return;
+
+    setLoading(true);
 
     try {
       const result = await signIn("credentials", {
@@ -47,7 +73,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError("Invalid email or password. Please check your credentials and try again.");
       } else {
         const res = await fetch("/api/auth/session");
         const sessionData = await res.json();
@@ -61,125 +87,201 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch {
-      setError("An error occurred. Please try again.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="rounded-full bg-primary/10 p-3">
-              <GraduationCap className="h-8 w-8 text-primary" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
+      <div className={`w-full max-w-md transition-all duration-500 ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
+        <Card className="card-shadow-lg border-0">
+          <CardHeader className="space-y-3 text-center pb-2">
+            <div className="flex justify-center">
+              <div className="rounded-2xl bg-primary p-3 shadow-lg">
+                <GraduationCap className="h-8 w-8 text-primary-foreground" />
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">TMS</CardTitle>
-          <CardDescription>
-            Sign in to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={role} onValueChange={(v) => { setRole(v as "teacher" | "student"); setError(null); }}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="teacher" className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                Teacher
-              </TabsTrigger>
-              <TabsTrigger value="student" className="gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Student
-              </TabsTrigger>
-            </TabsList>
+            <div>
+              <CardTitle className="text-2xl font-bold tracking-tight">Welcome to TMS</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Sign in to your Teaching Management System</p>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <Tabs value={role} onValueChange={(v) => { setRole(v as "teacher" | "student"); setError(null); setFieldErrors({}); }}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="teacher" className="gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Teacher
+                </TabsTrigger>
+                <TabsTrigger value="student" className="gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  Student
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="teacher">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                    {error}
+              <TabsContent value="teacher">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {error && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-email"
+                        name="email"
+                        type="email"
+                        placeholder="teacher@tms.edu"
+                        autoComplete="email"
+                        className={`pl-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      />
+                    </div>
+                    {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    placeholder="teacher@tms.edu"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In as Teacher"}
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground">
-                  Demo: teacher@tms.edu / password123
-                </p>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="student">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                    {error}
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        className={`pl-10 pr-10 ${fieldErrors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="student-email">Email</Label>
-                  <Input
-                    id="student-email"
-                    name="email"
-                    type="email"
-                    placeholder="ahmed@student.edu"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
+                  <Button type="submit" className="w-full h-11" disabled={loading}>
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
+                      </span>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
 
-                <div className="space-y-2">
-                  <Label htmlFor="student-password">Password</Label>
-                  <Input
-                    id="student-password"
-                    name="password"
-                    type="password"
-                    placeholder="••••••••"
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Demo Credentials</span>
+                    </div>
+                  </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing in..." : "Sign In as Student"}
-                </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fillDemo("teacher@tms.edu", "password123")}
+                  >
+                    Use Teacher Demo Account
+                  </Button>
+                </form>
+              </TabsContent>
 
-                <p className="text-xs text-center text-muted-foreground">
-                  Demo: ahmed@student.edu / password123
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <TabsContent value="student">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {error && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="student-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="student-email"
+                        name="email"
+                        type="email"
+                        placeholder="ahmed@student.edu"
+                        autoComplete="email"
+                        className={`pl-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      />
+                    </div>
+                    {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="student-password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="student-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        className={`pl-10 pr-10 ${fieldErrors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
+                  </div>
+
+                  <Button type="submit" className="w-full h-11" disabled={loading}>
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
+                      </span>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-card px-2 text-muted-foreground">Demo Credentials</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => fillDemo("ahmed@student.edu", "password123")}
+                  >
+                    Use Student Demo Account
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          Teaching Management System &middot; {new Date().getFullYear()}
+        </p>
+      </div>
     </div>
   );
 }

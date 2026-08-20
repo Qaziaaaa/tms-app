@@ -132,9 +132,12 @@ export default function ClassesPage() {
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Classes</h1>
-          <Button onClick={openCreate}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
+            <p className="text-muted-foreground mt-0.5">Manage your classes, schedules, and student groups</p>
+          </div>
+          <Button onClick={openCreate} className="shadow-md">
             <Plus className="mr-2 h-4 w-4" /> Add Class
           </Button>
         </div>
@@ -143,16 +146,16 @@ export default function ClassesPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
           </div>
-        ) : classes.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              No classes yet. Click "Add Class" to create your first one.
+          ) : classes.length === 0 ? (
+          <Card className="card-shadow">
+            <CardContent className="py-16 text-center text-muted-foreground">
+              No classes yet. Click &quot;Add Class&quot; to create your first one.
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {classes.map((cls) => (
-              <Card key={cls.id}>
+              <Card key={cls.id} className="card-shadow card-hover group">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{cls.name}</CardTitle>
