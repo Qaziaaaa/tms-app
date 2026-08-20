@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -23,14 +23,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState<"teacher" | "student">("teacher");
 
-  if (status === "authenticated" && session?.user) {
-    if (session.user.role === "student") {
-      router.push("/student/dashboard");
-    } else {
-      router.push("/dashboard");
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      const target = session.user.role === "student" ? "/student/dashboard" : "/dashboard";
+      router.push(target);
     }
-    return null;
-  }
+  }, [status, session, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
