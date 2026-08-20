@@ -3,8 +3,8 @@ import { NextRequest } from "next/server";
 import { sendError } from "@/lib/api-utils";
 
 type AuthResult =
-  | { userId: string; role: string; error?: never }
-  | { userId?: never; role?: never; error: ReturnType<typeof sendError> };
+  | { userId: string; role: string; email: string; error?: never }
+  | { userId?: never; role?: never; email?: never; error: ReturnType<typeof sendError> };
 
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const token = await getToken({
@@ -16,7 +16,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     return { error: sendError(401, "Authentication required") };
   }
 
-  return { userId: token.id as string, role: token.role as string };
+  return { userId: token.id as string, role: token.role as string, email: (token.email as string) || "" };
 }
 
 export async function requireRole(

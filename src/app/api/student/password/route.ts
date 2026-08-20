@@ -19,6 +19,6 @@ export const PUT = asyncHandler(async (request: NextRequest) => {
     throw new ApiError(400, "Validation failed", Object.values(parsed.error.flatten().fieldErrors).flat());
   }
 
-  await changePassword(auth.userId, parsed.data.currentPassword, parsed.data.newPassword);
+  await changePassword(auth.email, parsed.data.currentPassword, parsed.data.newPassword);
   return sendSuccess({ updated: true }, "Password changed successfully");
 });
