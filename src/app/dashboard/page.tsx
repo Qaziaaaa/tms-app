@@ -38,15 +38,20 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("[Dashboard] status:", status, "session:", !!session);
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/dashboard")
         .then((r) => {
+          console.log("[Dashboard] API response status:", r.status);
           if (!r.ok) throw new Error("Failed to load dashboard");
           return r.json();
         })
-        .then((json) => setData(json.data))
-        .catch(() => {})
+        .then((json) => {
+          console.log("[Dashboard] API data:", json);
+          setData(json.data);
+        })
+        .catch((e) => console.error("[Dashboard] fetch error:", e))
         .finally(() => setLoading(false));
     }
   }, [status, router]);
