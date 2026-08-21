@@ -30,7 +30,7 @@ export const createAttendanceSessionSchema = z.object({
 
 export const attendanceRecordSchema = z.object({
   studentId: z.string().min(1),
-  status: z.enum(["PRESENT", "ABSENT", "LATE"]),
+  status: z.enum(["PRESENT", "ABSENT"]),
 });
 
 export const saveAttendanceSchema = z.object({

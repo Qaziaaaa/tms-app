@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
-import { Plus, Trash2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClassItem { id: string; name: string; department: string; }
@@ -155,7 +155,7 @@ function AttendanceContent() {
   }
 
   function getStatusFor(studentId: string): string {
-    return records.find(r => r.studentId === studentId)?.status || "PRESENT";
+    return records.find(r => r.studentId === studentId)?.status || "";
   }
 
   if (status === "loading" || !session?.user) {
@@ -285,21 +285,13 @@ function AttendanceContent() {
                                   >
                                     <CheckCircle2 className="mr-1 h-3 w-3" /> P
                                   </Button>
-                                  <Button
+                                   <Button
                                     size="sm"
                                     variant={st === "ABSENT" ? "default" : "outline"}
                                     className={st === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}
                                     onClick={() => toggleStatus(s.id, "ABSENT")}
                                   >
                                     <XCircle className="mr-1 h-3 w-3" /> A
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant={st === "LATE" ? "default" : "outline"}
-                                    className={st === "LATE" ? "bg-yellow-500 hover:bg-yellow-600 text-black" : ""}
-                                    onClick={() => toggleStatus(s.id, "LATE")}
-                                  >
-                                    <Clock className="mr-1 h-3 w-3" /> L
                                   </Button>
                                 </div>
                               </TableCell>
