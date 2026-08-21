@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,16 +40,28 @@ export default function StudentsPage() {
 
   const [csvText, setCsvText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredStudents = useMemo(() => {
+    if (!search.trim()) return students;
+    const q = search.trim().toLowerCase();
+    return students.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
+    );
+  }, [students, search]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes").then(r => r.json()).then((json) => {
-        const data = json.data as ClassItem[];
-        setClasses(data);
-        setLoading(false);
-        if (data.length > 0) setSelectedClassId(data[0].id);
-      });
+      fetch("/api/classes")
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then((json) => {
+          const data = json.data as ClassItem[];
+          setClasses(data);
+          if (data.length > 0) setSelectedClassId(data[0].id);
+        })
+        .catch(() => setClasses([]))
+        .finally(() => setLoading(false));
     }
   }, [status, router]);
 
@@ -92,10 +105,11 @@ export default function StudentsPage() {
       setDialogOpen(false);
       fetchStudents();
     } else {
-      const data = await res.json();
-      const err = data.error;
-      const msg = typeof err === "string" ? err : typeof err === "object" && err ? Object.values(err).flat().join(", ") : "Failed to save student";
-      toast.error(msg);
+      try {
+        const data = await res.json();
+        const msg = data.errors?.length ? data.errors.join(", ") : data.message || "Failed to save student";
+        toast.error(msg);
+      } catch { toast.error("Failed to save student"); }
     }
     setSaving(false);
   }
@@ -124,7 +138,7 @@ export default function StudentsPage() {
     });
     if (res.ok) {
       const data = await res.json();
-      toast.success(`Imported ${data.count || studentsList.length} students`);
+      toast.success(`Imported ${data.data?.created || studentsList.length} students`);
       setCsvText("");
       fetchStudents();
     } else {
@@ -147,32 +161,49 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
           {loading ? (
             <Skeleton className="h-10 w-64" />
           ) : (
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
             >
               {classes.map(c => (
                 <option key={c.id} value={c.id}>{c.name} — {c.department} ({c.batch})</option>
               ))}
             </select>
           )}
-          <Button onClick={openCreate} disabled={!selectedClassId}><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search by name or roll number..."
+            delay={200}
+          />
+          <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card className="card-shadow">
-              <CardHeader><CardTitle className="text-lg">Student List</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  Student List
+                  {!loadingStudents && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {search.trim() ? `${filteredStudents.length} of ${students.length}` : `${students.length} students`}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
               <CardContent>
                 {loadingStudents ? (
                   <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
-                ) : students.length === 0 ? (
-                  <p className="py-8 text-center text-muted-foreground">No students in this class yet.</p>
+                ) : filteredStudents.length === 0 ? (
+                  <p className="py-8 text-center text-muted-foreground">
+                    {students.length === 0 ? "No students in this class yet." : "No students match your search."}
+                  </p>
                 ) : (
                   <div className="max-h-[500px] overflow-auto">
                     <Table>
@@ -184,7 +215,7 @@ export default function StudentsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {students.map(s => (
+                        {filteredStudents.map(s => (
                           <TableRow key={s.id}>
                             <TableCell><Badge variant="outline">{s.rollNumber}</Badge></TableCell>
                             <TableCell className="font-medium">{s.name}</TableCell>

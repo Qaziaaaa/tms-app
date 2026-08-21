@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { serialize } from "@/lib/serialize";
 
 export class ApiError extends Error {
   public readonly statusCode: number;
@@ -17,7 +18,7 @@ export class ApiError extends Error {
 
 export function sendSuccess(data: unknown, message?: string, status = 200) {
   return NextResponse.json(
-    { success: true, data, message: message || undefined, errors: [] },
+    { success: true, data: serialize(data), message: message || undefined, errors: [] },
     { status }
   );
 }

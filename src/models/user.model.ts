@@ -20,6 +20,4 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-UserSchema.index({ email: 1 }, { unique: true });
-
 export const User = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

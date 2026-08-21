@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,7 +37,7 @@ interface Class {
   department: string;
   batch: string;
   schedule: string | null;
-  _count: { students: number };
+  studentCount: number;
 }
 
 export default function ClassesPage() {
@@ -54,6 +55,25 @@ export default function ClassesPage() {
   const [department, setDepartment] = useState("");
   const [batch, setBatch] = useState("");
   const [schedule, setSchedule] = useState("");
+  const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+
+  const departments = useMemo(() => {
+    const set = new Set(classes.map((c) => c.department));
+    return Array.from(set).sort();
+  }, [classes]);
+
+  const filteredClasses = useMemo(() => {
+    let result = classes;
+    if (deptFilter) result = result.filter((c) => c.department === deptFilter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(
+        (c) => c.name.toLowerCase().includes(q) || c.department.toLowerCase().includes(q) || c.batch.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [classes, search, deptFilter]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -137,7 +157,31 @@ export default function ClassesPage() {
             <h1 className="text-2xl font-bold tracking-tight">Classes</h1>
             <p className="text-muted-foreground mt-0.5">Manage your classes, schedules, and student groups</p>
           </div>
-          <Button onClick={openCreate} className="shadow-md">
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search classes..."
+            delay={200}
+          />
+          <select
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+          >
+            <option value="">All Departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+          {!loading && (
+            <span className="text-sm text-muted-foreground sm:ml-auto">
+              {filteredClasses.length} class{filteredClasses.length !== 1 ? "es" : ""}
+            </span>
+          )}
+          <Button onClick={openCreate} className="shadow-md sm:ml-auto">
             <Plus className="mr-2 h-4 w-4" /> Add Class
           </Button>
         </div>
@@ -146,15 +190,15 @@ export default function ClassesPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
           </div>
-          ) : classes.length === 0 ? (
+          ) : filteredClasses.length === 0 ? (
           <Card className="card-shadow">
             <CardContent className="py-16 text-center text-muted-foreground">
-              No classes yet. Click &quot;Add Class&quot; to create your first one.
+              {classes.length === 0 ? 'No classes yet. Click "Add Class" to create your first one.' : "No classes match your search."}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {classes.map((cls) => (
+            {filteredClasses.map((cls) => (
               <Card key={cls.id} className="card-shadow card-hover group">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -177,7 +221,7 @@ export default function ClassesPage() {
                       <Calendar className="h-3 w-3" /> {cls.schedule}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{cls._count.students} students</p>
+                  <p className="text-sm text-muted-foreground">{cls.studentCount ?? 0} students</p>
                 </CardContent>
               </Card>
             ))}

@@ -51,4 +51,14 @@ export async function deleteClass(id: string) {
   await connectDB();
   const cls = await Class.findOneAndDelete({ _id: id });
   if (!cls) throw new ApiError(404, "Class not found");
+  const { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } = await import("@/models");
+  const sessions = await AttendanceSession.find({ classId: id }).select("_id").lean();
+  const sessionIds = sessions.map((s) => s._id);
+  await AttendanceRecord.deleteMany({ sessionId: { $in: sessionIds } });
+  await AttendanceSession.deleteMany({ classId: id });
+  const assignments = await Assignment.find({ classId: id }).select("_id").lean();
+  const assignmentIds = assignments.map((a) => a._id);
+  await AssignmentSubmission.deleteMany({ assignmentId: { $in: assignmentIds } });
+  await Assignment.deleteMany({ classId: id });
+  await Student.deleteMany({ classId: id });
 }

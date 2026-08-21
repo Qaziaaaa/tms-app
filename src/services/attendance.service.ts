@@ -28,8 +28,13 @@ export async function getSessionById(id: string) {
 
   const records = await AttendanceRecord.find({ sessionId: id })
     .populate("studentId", "name rollNumber")
-    .sort({ "studentId.rollNumber": "asc" })
     .lean();
+
+  records.sort((a, b) => {
+    const aRoll = (a.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
+    const bRoll = (b.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
+    return aRoll - bRoll;
+  });
 
   return { ...session, records };
 }

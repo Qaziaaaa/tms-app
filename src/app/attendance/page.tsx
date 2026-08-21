@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Trash2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClassItem { id: string; name: string; department: string; }
-interface Session { id: string; date: string; _count: { records: number }; }
+interface Session { id: string; date: string; recordCount: number; }
 interface Student { id: string; rollNumber: string; name: string; }
 interface RecordItem { studentId: string; status: string; }
 
@@ -34,17 +35,29 @@ function AttendanceContent() {
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [studentSearch, setStudentSearch] = useState("");
+
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return students;
+    const q = studentSearch.trim().toLowerCase();
+    return students.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
+    );
+  }, [students, studentSearch]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes").then(r => r.json()).then((json) => {
-        const data = json.data as ClassItem[];
-        setClasses(data);
-        setLoading(false);
-        if (preselectedClass) setSelectedClassId(preselectedClass);
-        else if (data.length > 0) setSelectedClassId(data[0].id);
-      });
+      fetch("/api/classes")
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then((json) => {
+          const data = json.data as ClassItem[];
+          setClasses(data);
+          if (preselectedClass) setSelectedClassId(preselectedClass);
+          else if (data.length > 0) setSelectedClassId(data[0].id);
+        })
+        .catch(() => setClasses([]))
+        .finally(() => setLoading(false));
     }
   }, [status, router, preselectedClass]);
 
@@ -54,8 +67,8 @@ function AttendanceContent() {
       setActiveSession(null);
       setRecords([]);
       Promise.all([
-        fetch(`/api/attendance/sessions?classId=${selectedClassId}`).then(r => r.json()),
-        fetch(`/api/students?classId=${selectedClassId}&pageSize=200`).then(r => r.json()),
+        fetch(`/api/attendance/sessions?classId=${selectedClassId}`).then(r => r.ok ? r.json() : { data: [] }),
+        fetch(`/api/students?classId=${selectedClassId}&pageSize=200`).then(r => r.ok ? r.json() : { data: { students: [] } }),
       ]).then(([sessJson, studJson]) => {
         setSessions(sessJson.data || []);
         setStudents((studJson.data.students || []).map((s: Student) => ({ id: s.id, rollNumber: s.rollNumber, name: s.name })));
@@ -74,11 +87,10 @@ function AttendanceContent() {
     if (res.ok) {
       const s = await res.json();
       toast.success("Session created");
-      selectSession(s);
+      selectSession(s.data);
       fetchSessions();
     } else {
-      const data = await res.json();
-      toast.error(data.error || "Failed to create session");
+      try { const data = await res.json(); toast.error(data.errors?.length ? data.errors.join(", ") : data.message || "Failed to create session"); } catch { toast.error("Failed to create session"); }
     }
   }
 
@@ -160,17 +172,17 @@ function AttendanceContent() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
           {loading ? <Skeleton className="h-10 w-64" /> : (
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
             >
               {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
             </select>
           )}
-          <Button onClick={createSession} disabled={!selectedClassId}>
+          <Button onClick={createSession} disabled={!selectedClassId} className="sm:ml-auto">
             <Plus className="mr-2 h-4 w-4" /> New Session
           </Button>
         </div>
@@ -195,7 +207,7 @@ function AttendanceContent() {
                         <p className="text-sm font-medium">
                           {new Date(s.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                         </p>
-                        <p className="text-xs text-muted-foreground">{s._count.records} records</p>
+                        <p className="text-xs text-muted-foreground">{s.recordCount} records</p>
                       </div>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteId(s.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -232,17 +244,32 @@ function AttendanceContent() {
                 ) : students.length === 0 ? (
                   <p className="py-12 text-center text-muted-foreground">No students in this class.</p>
                 ) : (
-                  <div className="max-h-[400px] overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Roll</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead className="text-right">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {students.map(s => {
+                  <>
+                    <div className="mb-4">
+                      <SearchBar
+                        value={studentSearch}
+                        onChange={setStudentSearch}
+                        placeholder="Search students..."
+                        delay={200}
+                      />
+                    </div>
+                    <div className="max-h-[400px] overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Roll</TableHead>
+                            <TableHead>Name</TableHead>
+                            <TableHead className="text-right">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredStudents.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
+                                No students match your search.
+                              </TableCell>
+                            </TableRow>
+                          ) : filteredStudents.map(s => {
                           const st = getStatusFor(s.id);
                           return (
                             <TableRow key={s.id}>
@@ -281,7 +308,8 @@ function AttendanceContent() {
                         })}
                       </TableBody>
                     </Table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
