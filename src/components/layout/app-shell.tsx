@@ -15,9 +15,9 @@ export function AppShell({ children, user }: AppShellProps) {
   return (
     <div className="min-h-screen bg-muted/30">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
-      <div className="lg:pl-64">
+      <div className="lg:pl-[220px] transition-all duration-300">
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="p-3 pb-20 sm:p-4 sm:pb-20 md:p-5 md:pb-5">{children}</main>
       </div>
     </div>
   );

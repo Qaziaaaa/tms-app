@@ -40,6 +40,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-clr-blue: hsl(var(--clr-blue));
+  --color-clr-blue-bg: hsl(var(--clr-blue-bg));
+  --color-clr-blue-dark: hsl(var(--clr-blue-dark));
+  --color-clr-green: hsl(var(--clr-green));
+  --color-clr-green-bg: hsl(var(--clr-green-bg));
+  --color-clr-green-dark: hsl(var(--clr-green-dark));
+  --color-clr-red: hsl(var(--clr-red));
+  --color-clr-red-bg: hsl(var(--clr-red-bg));
+  --color-clr-amber: hsl(var(--clr-amber));
+  --color-clr-amber-bg: hsl(var(--clr-amber-bg));
+  --color-clr-amber-dark: hsl(var(--clr-amber-dark));
+  --color-clr-purple: hsl(var(--clr-purple));
+  --color-clr-purple-bg: hsl(var(--clr-purple-bg));
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -82,6 +95,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --clr-blue: 221 83% 55%;
+  --clr-blue-bg: 221 83% 96%;
+  --clr-blue-dark: 221 83% 35%;
+  --clr-green: 142 76% 36%;
+  --clr-green-bg: 142 76% 94%;
+  --clr-green-dark: 142 76% 26%;
+  --clr-red: 0 84% 60%;
+  --clr-red-bg: 0 84% 96%;
+  --clr-amber: 40 97% 45%;
+  --clr-amber-bg: 40 97% 95%;
+  --clr-amber-dark: 32 95% 35%;
+  --clr-purple: 262 83% 58%;
+  --clr-purple-bg: 262 83% 96%;
 }
 
 .dark {
@@ -178,6 +204,6 @@ main > div {
     transform: translateX(0) !important;
   }
   .lg\:pl-64 {
-    padding-left: 16rem !important;
+    padding-left: 13.75rem !important;
   }
 }
