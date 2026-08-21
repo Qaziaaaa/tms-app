@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
+import { APP_FULL_NAME } from "@/lib/constants";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Teacher Management System",
+  title: APP_FULL_NAME,
   description: "Manage attendance, assignments, marks, and reports",
 };
 

@@ -1,10 +1,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/tms";
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+  console.error("MONGODB_URI environment variable is required");
+  process.exit(1);
+}
 
 async function main() {
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI!);
   console.log("Connected to MongoDB, clearing all collections...");
 
   const collections = await mongoose.connection.db!.listCollections().toArray();
@@ -111,8 +115,6 @@ async function main() {
   }
 
   console.log(`Seed complete: 1 teacher (${teacher._id}), ${studentCount} students, 3 classes`);
-  console.log("Teacher login: teacher@tms.edu / password123");
-  console.log("Student login: ahmed@student.edu / password123");
   await mongoose.disconnect();
 }
 

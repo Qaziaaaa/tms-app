@@ -245,7 +245,7 @@ export default function StudentsPage() {
                 <Textarea
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
-                  placeholder={"CS-24-001,Ahmed Khan\nCS-24-002,Fatima Ali"}
+                  placeholder="Roll Number, Full Name (one student per line)"
                   rows={6}
                   className="font-mono text-xs"
                 />

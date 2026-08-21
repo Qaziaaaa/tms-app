@@ -1,7 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
-
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+import { AI_CONFIG } from "@/lib/constants";
 
 async function callGroq(prompt: string): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
@@ -9,14 +8,14 @@ async function callGroq(prompt: string): Promise<string> {
     return JSON.stringify({ error: "GROQ_API_KEY not configured" });
   }
 
-  const res = await fetch(GROQ_API_URL, {
+  const res = await fetch(AI_CONFIG.API_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama-3.1-8b-instant",
+      model: AI_CONFIG.MODEL,
       messages: [
         {
           role: "system",
@@ -24,8 +23,8 @@ async function callGroq(prompt: string): Promise<string> {
         },
         { role: "user", content: prompt },
       ],
-      temperature: 0.3,
-      max_tokens: 2000,
+      temperature: AI_CONFIG.TEMPERATURE,
+      max_tokens: AI_CONFIG.MAX_TOKENS,
     }),
   });
 
@@ -124,8 +123,8 @@ export async function getAIInsights(classId: string): Promise<ClassInsight> {
 
   const studentsWithRisk = data.students.map((s) => {
     let riskLevel: "low" | "medium" | "high" = "low";
-    if (s.attendancePercentage < 40 || s.submissionRate < 30) riskLevel = "high";
-    else if (s.attendancePercentage < 60 || s.submissionRate < 50) riskLevel = "medium";
+    if (s.attendancePercentage < AI_CONFIG.RISK_THRESHOLDS.ATTENDANCE_HIGH || s.submissionRate < AI_CONFIG.RISK_THRESHOLDS.SUBMISSION_HIGH) riskLevel = "high";
+    else if (s.attendancePercentage < AI_CONFIG.RISK_THRESHOLDS.ATTENDANCE_MEDIUM || s.submissionRate < AI_CONFIG.RISK_THRESHOLDS.SUBMISSION_MEDIUM) riskLevel = "medium";
     return { ...s, riskLevel, aiAnalysis: "" };
   });
 

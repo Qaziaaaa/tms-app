@@ -44,26 +44,6 @@ export default function LoginPage() {
     return Object.keys(errors).length === 0;
   }
 
-  function fillDemo(email: string, pass: string) {
-    const prefix = role === "teacher" ? "login" : "student";
-    const form = document.getElementById(`${prefix}-form`) as HTMLFormElement | null;
-    if (!form) return;
-    const emailInput = form.elements.namedItem("email") as HTMLInputElement;
-    const passInput = form.elements.namedItem("password") as HTMLInputElement;
-    if (emailInput) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-      nativeSetter.call(emailInput, email);
-      emailInput.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    if (passInput) {
-      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-      nativeSetter.call(passInput, pass);
-      passInput.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    setFieldErrors({});
-    setError(null);
-  }
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -97,6 +77,8 @@ export default function LoginPage() {
     }
   }
 
+  const formId = role === "teacher" ? "login-form" : "student-form";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
       <div className={`w-full max-w-md transition-all duration-500 ${mounted ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}>
@@ -109,7 +91,7 @@ export default function LoginPage() {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold tracking-tight">Welcome to TMS</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Sign in to your Teaching Management System</p>
+              <p className="text-sm text-muted-foreground mt-1">Sign in to your account</p>
             </div>
           </CardHeader>
           <CardContent className="pt-4">
@@ -126,7 +108,7 @@ export default function LoginPage() {
               </TabsList>
 
               <TabsContent value="teacher">
-                <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
+                <form id={formId} onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                       {error}
@@ -141,7 +123,7 @@ export default function LoginPage() {
                         id="login-email"
                         name="email"
                         type="email"
-                        placeholder="teacher@tms.edu"
+                        placeholder="you@example.com"
                         autoComplete="email"
                         className={`pl-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
@@ -181,29 +163,11 @@ export default function LoginPage() {
                       "Sign In"
                     )}
                   </Button>
-
-                  <div className="relative py-2">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Demo Credentials</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => fillDemo("teacher@tms.edu", "password123")}
-                  >
-                    Use Teacher Demo Account
-                  </Button>
                 </form>
               </TabsContent>
 
               <TabsContent value="student">
-                <form id="student-form" onSubmit={handleSubmit} className="space-y-4">
+                <form id={formId} onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                       {error}
@@ -218,7 +182,7 @@ export default function LoginPage() {
                         id="student-email"
                         name="email"
                         type="email"
-                        placeholder="ahmed@student.edu"
+                        placeholder="you@example.com"
                         autoComplete="email"
                         className={`pl-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
@@ -257,24 +221,6 @@ export default function LoginPage() {
                     ) : (
                       "Sign In"
                     )}
-                  </Button>
-
-                  <div className="relative py-2">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">Demo Credentials</span>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => fillDemo("ahmed@student.edu", "password123")}
-                  >
-                    Use Student Demo Account
                   </Button>
                 </form>
               </TabsContent>
