@@ -1,8 +1,21 @@
+function isPlainObject(obj: object): boolean {
+  const proto = Object.getPrototypeOf(obj);
+  return proto === Object.prototype || proto === null;
+}
+
 function convertId(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== "object") return obj;
 
   if (Array.isArray(obj)) return obj.map(convertId);
+
+  if (!isPlainObject(obj as object)) {
+    if (typeof (obj as { toString?: () => string }).toString === "function") {
+      const str = (obj as { toString: () => string }).toString();
+      if (/^[0-9a-f]{24}$/i.test(str)) return str;
+    }
+    return obj;
+  }
 
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
