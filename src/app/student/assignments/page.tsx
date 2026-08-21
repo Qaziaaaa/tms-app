@@ -39,8 +39,9 @@ export default function StudentAssignments() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/student/assignments")
-        .then((r) => r.json())
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((json) => setAssignments(json.data || []))
+        .catch(() => setAssignments([]))
         .finally(() => setLoading(false));
     }
   }, [status, router]);

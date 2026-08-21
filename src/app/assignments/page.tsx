@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -14,11 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClassItem { id: string; name: string; }
-interface Assignment { id: string; title: string; description: string | null; dueDate: string; totalMarks: number; _count: { submissions: number }; }
+interface Assignment { id: string; title: string; description: string | null; dueDate: string; totalMarks: number; submissionCount: number; }
 interface Submission { id: string; studentId: string; status: string; marks: number | null; student: { id: string; name: string; rollNumber: string }; }
 
 export default function AssignmentsPage() {
@@ -44,16 +45,26 @@ export default function AssignmentsPage() {
   const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [subSaving, setSubSaving] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredAssignments = useMemo(() => {
+    if (!search.trim()) return assignments;
+    const q = search.trim().toLowerCase();
+    return assignments.filter((a) => a.title.toLowerCase().includes(q));
+  }, [assignments, search]);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes").then(r => r.json()).then((json) => {
-        const data = json.data as ClassItem[];
-        setClasses(data);
-        setLoading(false);
-        if (data.length > 0) setSelectedClassId(data[0].id);
-      });
+      fetch("/api/classes")
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then((json) => {
+          const data = json.data as ClassItem[];
+          setClasses(data);
+          if (data.length > 0) setSelectedClassId(data[0].id);
+        })
+        .catch(() => setClasses([]))
+        .finally(() => setLoading(false));
     }
   }, [status, router]);
 
@@ -158,30 +169,47 @@ export default function AssignmentsPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
           {loading ? <Skeleton className="h-10 w-64" /> : (
-            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
-          <Button onClick={openCreate} disabled={!selectedClassId}><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            placeholder="Search assignments..."
+            delay={200}
+          />
+          <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <Card className="card-shadow">
-              <CardHeader><CardTitle className="text-lg">Assignments</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center justify-between">
+                  Assignments
+                  {!loadingAssignments && (
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {search.trim() ? `${filteredAssignments.length} of ${assignments.length}` : assignments.length}
+                    </span>
+                  )}
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-2 max-h-[500px] overflow-auto">
                 {loadingAssignments ? (
                   Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16" />)
-                ) : assignments.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-muted-foreground">No assignments yet.</p>
+                ) : filteredAssignments.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    {assignments.length === 0 ? "No assignments yet." : "No assignments match your search."}
+                  </p>
                 ) : (
-                  assignments.map(a => (
+                  filteredAssignments.map(a => (
                     <div key={a.id} className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${activeAssignment?.id === a.id ? "border-primary bg-primary/5" : "hover:bg-accent"}`} onClick={() => selectAssignment(a)}>
                       <div>
                         <p className="text-sm font-medium">{a.title}</p>
-                        <p className="text-xs text-muted-foreground">Due {new Date(a.dueDate).toLocaleDateString()} &middot; {a.totalMarks} marks &middot; {a._count.submissions} submissions</p>
+                        <p className="text-xs text-muted-foreground">Due {new Date(a.dueDate).toLocaleDateString()} &middot; {a.totalMarks} marks &middot; {a.submissionCount} submissions</p>
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEdit(a); }}><Pencil className="h-3.5 w-3.5" /></Button>

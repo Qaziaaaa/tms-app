@@ -78,7 +78,7 @@ async function getClassDataForAI(classId: string) {
     students.map(async (student) => {
       const sessionsAttended = await AttendanceRecord.countDocuments({
         studentId: student._id,
-        session: { $in: (await AttendanceSession.find({ classId }).select("_id").lean()).map((s) => s._id) },
+        sessionId: { $in: (await AttendanceSession.find({ classId }).select("_id").lean()).map((s) => s._id) },
         status: "PRESENT",
       });
 

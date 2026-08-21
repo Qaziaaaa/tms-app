@@ -50,12 +50,15 @@ export default function InsightsPage() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes").then(r => r.json()).then((json) => {
-        const data = json.data as ClassItem[];
-        setClasses(data);
-        setLoading(false);
-        if (data.length > 0) setSelectedClassId(data[0].id);
-      });
+      fetch("/api/classes")
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then((json) => {
+          const data = json.data as ClassItem[];
+          setClasses(data);
+          if (data.length > 0) setSelectedClassId(data[0].id);
+        })
+        .catch(() => setClasses([]))
+        .finally(() => setLoading(false));
     }
   }, [status, router]);
 
@@ -68,8 +71,7 @@ export default function InsightsPage() {
       const json = await res.json();
       setInsights(json.data);
     } else {
-      const json = await res.json();
-      toast.error(json.message || "Failed to generate insights");
+      toast.error("Failed to generate AI insights");
     }
     setLoadingInsights(false);
   }
@@ -203,7 +205,7 @@ export default function InsightsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {insights.students.sort((a, b) => {
+                      {[...insights.students].sort((a, b) => {
                         const order = { high: 0, medium: 1, low: 2 };
                         return order[a.riskLevel] - order[b.riskLevel];
                       }).map(s => (

@@ -20,7 +20,7 @@ export async function getDashboard() {
   const recentAttendance = await Promise.all(
     recentSessions.map(async (session) => {
       const recordCount = await AttendanceRecord.countDocuments({ sessionId: session._id });
-      return { ...session, _count: { records: recordCount } };
+      return { ...session, recordCount };
     })
   );
 
@@ -46,8 +46,7 @@ export async function getDashboard() {
       }
 
       return {
-        id: cls._id,
-        name: cls.name,
+        ...cls,
         studentCount,
         sessionCount,
         averageAttendance,

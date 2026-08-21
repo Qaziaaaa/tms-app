@@ -47,6 +47,10 @@ export default function StudentPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
+      if (!res.ok) {
+        setMessage({ type: "error", text: "Failed to change password" });
+        return;
+      }
       const json = await res.json();
 
       if (json.success) {

@@ -17,10 +17,10 @@ interface DashboardData {
   totalSessions: number;
   totalAssignments: number;
   recentAttendance: Array<{
-    _id: string;
+    id: string;
     date: string;
     classId: { name: string };
-    _count: { records: number };
+    recordCount: number;
   }>;
   classesWithStats: Array<{
     id: string;
@@ -87,7 +87,7 @@ export default function DashboardPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <AlertCircle className="h-10 w-10 text-destructive mb-3" />
               <p className="text-sm font-medium text-destructive">{error}</p>
-              <Button variant="outline" size="sm" className="mt-3" onClick={() => { setError(null); setLoading(true); fetch("/api/dashboard").then(r => r.json()).then(json => setData(json.data)).catch(e => setError(e.message)).finally(() => setLoading(false)); }}>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => { setError(null); setLoading(true); fetch("/api/dashboard").then(r => { if (!r.ok) throw new Error("Failed to load dashboard"); return r.json(); }).then(json => setData(json.data)).catch(e => setError(e.message || "Failed to load dashboard data")).finally(() => setLoading(false)); }}>
                 Try Again
               </Button>
             </CardContent>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                     <p className="text-sm text-muted-foreground py-4">No attendance sessions yet.</p>
                   ) : (
                     data?.recentAttendance.map((s) => (
-                      <div key={s._id} className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors">
+                      <div key={s.id} className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors">
                         <div>
                           <p className="font-medium">{s.classId?.name}</p>
                           <p className="text-xs text-muted-foreground">
@@ -175,7 +175,7 @@ export default function DashboardPage() {
                             })}
                           </p>
                         </div>
-                        <Badge variant="secondary">{s._count.records} records</Badge>
+                        <Badge variant="secondary">{s.recordCount} records</Badge>
                       </div>
                     ))
                   )}

@@ -46,10 +46,20 @@ export default function LoginPage() {
 
   function fillDemo(email: string, pass: string) {
     const prefix = role === "teacher" ? "login" : "student";
-    const emailInput = document.getElementById(`${prefix}-email`) as HTMLInputElement;
-    const passInput = document.getElementById(`${prefix}-password`) as HTMLInputElement;
-    if (emailInput) { emailInput.value = email; emailInput.dispatchEvent(new Event("input", { bubbles: true })); }
-    if (passInput) { passInput.value = pass; passInput.dispatchEvent(new Event("input", { bubbles: true })); }
+    const form = document.getElementById(`${prefix}-form`) as HTMLFormElement | null;
+    if (!form) return;
+    const emailInput = form.elements.namedItem("email") as HTMLInputElement;
+    const passInput = form.elements.namedItem("password") as HTMLInputElement;
+    if (emailInput) {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      nativeSetter.call(emailInput, email);
+      emailInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (passInput) {
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      nativeSetter.call(passInput, pass);
+      passInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
     setFieldErrors({});
     setError(null);
   }
@@ -75,17 +85,10 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError("Invalid email or password. Please check your credentials and try again.");
+      } else if (role === "student") {
+        window.location.href = "/student/dashboard";
       } else {
-        const res = await fetch("/api/auth/session");
-        const sessionData = await res.json();
-        const userRole = sessionData?.user?.role;
-
-        if (userRole === "student") {
-          router.push("/student/dashboard");
-        } else {
-          router.push("/dashboard");
-        }
-        router.refresh();
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -123,7 +126,7 @@ export default function LoginPage() {
               </TabsList>
 
               <TabsContent value="teacher">
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form id="login-form" onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                       {error}
@@ -200,7 +203,7 @@ export default function LoginPage() {
               </TabsContent>
 
               <TabsContent value="student">
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form id="student-form" onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
                       {error}

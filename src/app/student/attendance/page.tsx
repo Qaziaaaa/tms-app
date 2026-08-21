@@ -47,8 +47,9 @@ export default function StudentAttendance() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/student/attendance")
-        .then((r) => r.json())
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((json) => setData(json.data))
+        .catch(() => setData(null))
         .finally(() => setLoading(false));
     }
   }, [status, router]);

@@ -25,8 +25,13 @@ export async function getAssignmentById(id: string) {
 
   const submissions = await AssignmentSubmission.find({ assignmentId: id })
     .populate("studentId", "name rollNumber")
-    .sort({ "studentId.rollNumber": "asc" })
     .lean();
+
+  submissions.sort((a, b) => {
+    const aRoll = (a.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
+    const bRoll = (b.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
+    return aRoll - bRoll;
+  });
 
   return { ...assignment, submissions };
 }
