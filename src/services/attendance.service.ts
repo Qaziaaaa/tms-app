@@ -55,7 +55,7 @@ export async function deleteSession(id: string) {
   await AttendanceRecord.deleteMany({ sessionId: id });
 }
 
-export async function saveAttendance(sessionId: string, records: { studentId: string; status: "PRESENT" | "ABSENT" | "LATE" }[]) {
+export async function saveAttendance(sessionId: string, records: { studentId: string; status: "PRESENT" | "ABSENT" }[]) {
   await connectDB();
   const session = await AttendanceSession.findOne({ _id: sessionId });
   if (!session) throw new ApiError(404, "Session not found");

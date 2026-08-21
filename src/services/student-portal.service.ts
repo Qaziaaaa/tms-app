@@ -43,13 +43,12 @@ export async function getStudentAttendance(email: string) {
 
   const presentCount = records.filter((r) => r.status === "PRESENT").length;
   const absentCount = records.filter((r) => r.status === "ABSENT").length;
-  const lateCount = records.filter((r) => r.status === "LATE").length;
   const totalDays = records.length;
   const percentage = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
 
   return {
     records,
-    summary: { present: presentCount, absent: absentCount, late: lateCount, totalDays, percentage },
+    summary: { present: presentCount, absent: absentCount, totalDays, percentage },
   };
 }
 

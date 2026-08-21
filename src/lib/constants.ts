@@ -1,7 +1,6 @@
 export const ATTENDANCE_STATUS = {
   PRESENT: "PRESENT",
   ABSENT: "ABSENT",
-  LATE: "LATE",
 } as const;
 
 export const SUBMISSION_STATUS = {

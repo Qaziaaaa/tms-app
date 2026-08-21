@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+export type AttendanceStatus = "PRESENT" | "ABSENT";
 
 export interface IAttendanceRecord extends Document {
   sessionId: mongoose.Types.ObjectId;
@@ -11,7 +11,7 @@ export interface IAttendanceRecord extends Document {
 const AttendanceRecordSchema = new Schema<IAttendanceRecord>({
   sessionId: { type: Schema.Types.ObjectId, ref: "AttendanceSession", required: true },
   studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true },
-  status: { type: String, enum: ["PRESENT", "ABSENT", "LATE"], required: true },
+  status: { type: String, enum: ["PRESENT", "ABSENT"], required: true },
 });
 
 AttendanceRecordSchema.index({ sessionId: 1, studentId: 1 }, { unique: true });
