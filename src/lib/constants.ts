@@ -22,6 +22,29 @@ export const GRADE_SCALE: { min: number; max: number; grade: string }[] = [
 ];
 
 export const APP_NAME = "TMS";
+export const APP_FULL_NAME = "Teacher Management System";
+
+export const AI_CONFIG = {
+  MODEL: "llama-3.1-8b-instant",
+  TEMPERATURE: 0.3,
+  MAX_TOKENS: 2000,
+  API_URL: "https://api.groq.com/openai/v1/chat/completions",
+  RISK_THRESHOLDS: {
+    ATTENDANCE_HIGH: 40,
+    ATTENDANCE_MEDIUM: 30,
+    SUBMISSION_HIGH: 60,
+    SUBMISSION_MEDIUM: 50,
+  },
+} as const;
+
+export const PAGINATION = {
+  DEFAULT_PAGE_SIZE: 20,
+  MAX_PAGE_SIZE: 200,
+} as const;
+
+export const RECENT_ITEMS_LIMIT = 5;
+
+export const BCRYPT_ROUNDS = 10;
 
 export const DAYS_OF_WEEK = [
   "Monday",

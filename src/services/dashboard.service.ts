@@ -1,5 +1,6 @@
 import { connectDB } from "@/lib/db";
 import { Class, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
+import { RECENT_ITEMS_LIMIT } from "@/lib/constants";
 
 export async function getDashboard() {
   await connectDB();
@@ -14,7 +15,7 @@ export async function getDashboard() {
   const recentSessions = await AttendanceSession.find()
     .populate("classId", "name")
     .sort({ date: -1 })
-    .limit(5)
+    .limit(RECENT_ITEMS_LIMIT)
     .lean();
 
   const recentAttendance = await Promise.all(
