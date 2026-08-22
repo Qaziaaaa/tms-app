@@ -7,7 +7,19 @@ import { StudentShell } from "@/components/layout/student-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ClipboardCheck, FileText, BarChart3, TrendingUp, AlertCircle } from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  ClipboardCheck,
+  FileText,
+  TrendingUp,
+  Flame,
+  Calendar,
+  Clock,
+  AlertCircle,
+  BookOpen,
+  CheckCircle2,
+} from "lucide-react";
 
 interface Profile {
   id: string;
@@ -17,26 +29,39 @@ interface Profile {
   class: { id: string; name: string; department: string; batch: string };
 }
 
-interface AttendanceSummary {
-  present: number;
-  absent: number;
-  late: number;
-  totalDays: number;
-  percentage: number;
+interface AttendanceData {
+  summary: { present: number; absent: number; totalDays: number; percentage: number };
+  monthlyBreakdown: { month: string; present: number; absent: number; total: number }[];
+  recentSessions: { date: string; status: string; className: string }[];
+  streak: { current: number; longest: number };
 }
 
-interface GradesSummary {
-  totalMarksObtained: number;
-  totalPossibleMarks: number;
-  overallPercentage: number;
+interface GradesData {
+  summary: { totalMarksObtained: number; totalPossibleMarks: number; overallPercentage: number };
+  gradeTrend: { title: string; percentage: number; marks: number; totalMarks: number }[];
 }
+
+interface AssignmentsData {
+  summary: { total: number; submitted: number; pending: number; overdue: number };
+  upcoming: { id: string; title: string; dueDate: string; totalMarks: number }[];
+}
+
+const attendanceChartConfig = {
+  present: { label: "Present", color: "var(--clr-green)" },
+  absent: { label: "Absent", color: "var(--clr-red)" },
+} satisfies ChartConfig;
+
+const gradeChartConfig = {
+  percentage: { label: "Score %", color: "var(--clr-blue)" },
+} satisfies ChartConfig;
 
 export default function StudentDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceSummary | null>(null);
-  const [grades, setGrades] = useState<GradesSummary | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
+  const [grades, setGrades] = useState<GradesData | null>(null);
+  const [assignments, setAssignments] = useState<AssignmentsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,18 +69,34 @@ export default function StudentDashboard() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       Promise.all([
-        fetch("/api/student/profile").then((r) => { if (!r.ok) throw new Error("Failed to load profile"); return r.json(); }),
-        fetch("/api/student/attendance").then((r) => { if (!r.ok) throw new Error("Failed to load attendance"); return r.json(); }),
-        fetch("/api/student/grades").then((r) => { if (!r.ok) throw new Error("Failed to load grades"); return r.json(); }),
-      ]).then(([profileRes, attendanceRes, gradesRes]) => {
-        setProfile(profileRes.data);
-        setAttendance(attendanceRes.data?.summary || null);
-        setGrades(gradesRes.data?.summary || null);
-        setLoading(false);
-      }).catch((e) => {
-        setError(e.message || "Failed to load dashboard data");
-        setLoading(false);
-      });
+        fetch("/api/student/profile").then((r) => {
+          if (!r.ok) throw new Error("Failed to load profile");
+          return r.json();
+        }),
+        fetch("/api/student/attendance").then((r) => {
+          if (!r.ok) throw new Error("Failed to load attendance");
+          return r.json();
+        }),
+        fetch("/api/student/grades").then((r) => {
+          if (!r.ok) throw new Error("Failed to load grades");
+          return r.json();
+        }),
+        fetch("/api/student/assignments").then((r) => {
+          if (!r.ok) throw new Error("Failed to load assignments");
+          return r.json();
+        }),
+      ])
+        .then(([profileRes, attendanceRes, gradesRes, assignmentsRes]) => {
+          setProfile(profileRes.data);
+          setAttendance(attendanceRes.data);
+          setGrades(gradesRes.data);
+          setAssignments(assignmentsRes.data);
+          setLoading(false);
+        })
+        .catch((e) => {
+          setError(e.message || "Failed to load dashboard data");
+          setLoading(false);
+        });
     }
   }, [status, router]);
 
@@ -70,27 +111,30 @@ export default function StudentDashboard() {
     );
   }
 
-  const stats = attendance && grades
-    ? [
-        { title: "ATTENDANCE", value: `${attendance.percentage}%`, icon: ClipboardCheck, color: "bg-blue-500/10 text-blue-600", detail: `${attendance.present}/${attendance.totalDays} days` },
-        { title: "ASSIGNMENTS", value: `${grades.totalMarksObtained}/${grades.totalPossibleMarks}`, icon: FileText, color: "bg-green-500/10 text-green-600", detail: `${grades.overallPercentage}% average` },
-        { title: "OVERALL GRADE", value: `${grades.overallPercentage}%`, icon: TrendingUp, color: "bg-purple-500/10 text-purple-600", detail: grades.overallPercentage >= 70 ? "Passing" : "Needs improvement" },
-        { title: "TOTAL DAYS", value: attendance.totalDays, icon: BarChart3, color: "bg-orange-500/10 text-orange-600", detail: `${attendance.absent} absent` },
-      ]
-    : [];
+  const greetTime = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  };
 
   return (
     <StudentShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Welcome, {profile?.name || session.user.name}
-          </h1>
-          {profile && (
-            <p className="text-muted-foreground mt-0.5">
-              {profile.class.name} &middot; Roll #{profile.rollNumber}
-            </p>
-          )}
+      <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/90 via-primary to-primary/70 p-6 sm:p-8 text-primary-foreground">
+          <div className="relative z-10">
+            <p className="text-sm font-medium opacity-80">{greetTime()}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">
+              Welcome back, {profile?.name || session.user.name}
+            </h1>
+            {profile && (
+              <p className="text-sm opacity-70 mt-1.5">
+                {profile.class.name} &middot; Roll #{profile.rollNumber} &middot; {profile.class.department}
+              </p>
+            )}
+          </div>
+          <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+          <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/5" />
         </div>
 
         {error ? (
@@ -115,14 +159,48 @@ export default function StudentDashboard() {
                       </CardContent>
                     </Card>
                   ))
-                : stats.map((s) => (
+                : [
+                    {
+                      title: "Attendance",
+                      value: `${attendance?.summary.percentage ?? 0}%`,
+                      icon: ClipboardCheck,
+                      color: "bg-emerald-500/10 text-emerald-600",
+                      detail: `${attendance?.summary.present ?? 0}/${attendance?.summary.totalDays ?? 0} days present`,
+                    },
+                    {
+                      title: "Assignments",
+                      value: `${assignments?.summary.submitted ?? 0}/${assignments?.summary.total ?? 0}`,
+                      icon: FileText,
+                      color: "bg-blue-500/10 text-blue-600",
+                      detail: `${assignments?.summary.overdue ?? 0} overdue`,
+                    },
+                    {
+                      title: "Overall Grade",
+                      value: `${grades?.summary.overallPercentage ?? 0}%`,
+                      icon: TrendingUp,
+                      color: "bg-purple-500/10 text-purple-600",
+                      detail:
+                        (grades?.summary.overallPercentage ?? 0) >= 70
+                          ? "Passing"
+                          : "Needs improvement",
+                    },
+                    {
+                      title: "Attendance Streak",
+                      value: `${attendance?.streak.current ?? 0}`,
+                      icon: Flame,
+                      color: "bg-orange-500/10 text-orange-600",
+                      detail: `Longest: ${attendance?.streak.longest ?? 0} days`,
+                    },
+                  ].map((s) => (
                     <Card key={s.title} className="card-shadow card-hover group cursor-default">
                       <CardContent className="flex items-start gap-4 p-5">
                         <div className={`rounded-xl p-3 ${s.color}`}>
                           <s.icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{s.title}</p>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {s.title}
+                          </p>
                           <p className="text-2xl font-bold mt-0.5">{s.value}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">{s.detail}</p>
                         </div>
@@ -131,62 +209,143 @@ export default function StudentDashboard() {
                   ))}
             </div>
 
-            {!loading && attendance && (
+            {!loading && (
               <div className="grid gap-6 lg:grid-cols-2">
                 <Card className="card-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Attendance Summary</CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      Attendance Trend
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Present</span>
-                      <Badge variant="default">{attendance.present}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Absent</span>
-                      <Badge variant="destructive">{attendance.absent}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Late</span>
-                      <Badge variant="secondary">{attendance.late}</Badge>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Percentage</span>
-                      <Badge variant={attendance.percentage >= 75 ? "default" : "destructive"}>
-                        {attendance.percentage}%
-                      </Badge>
-                    </div>
+                  <CardContent>
+                    {attendance?.monthlyBreakdown && attendance.monthlyBreakdown.length > 0 ? (
+                      <ChartContainer config={attendanceChartConfig} className="h-[220px] w-full">
+                        <BarChart data={attendance.monthlyBreakdown}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                          <YAxis tick={{ fontSize: 12 }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="present" fill="var(--clr-green)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="absent" fill="var(--clr-red)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+                        No attendance data yet
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
                 <Card className="card-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Class Info</CardTitle>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      Grade Trend
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {profile && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Class</span>
-                          <span className="text-sm font-medium">{profile.class.name}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Department</span>
-                          <span className="text-sm font-medium">{profile.class.department}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Batch</span>
-                          <span className="text-sm font-medium">{profile.class.batch}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Roll Number</span>
-                          <span className="text-sm font-medium">{profile.rollNumber}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Email</span>
-                          <span className="text-sm font-medium">{profile.email}</span>
-                        </div>
-                      </>
+                  <CardContent>
+                    {grades?.gradeTrend && grades.gradeTrend.length > 0 ? (
+                      <ChartContainer config={gradeChartConfig} className="h-[220px] w-full">
+                        <BarChart data={grades.gradeTrend}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="title" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={50} />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="percentage" fill="var(--clr-blue)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
+                        No graded assignments yet
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {!loading && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="card-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      Recent Attendance
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {attendance?.recentSessions && attendance.recentSessions.length > 0 ? (
+                      <div className="space-y-2">
+                        {attendance.recentSessions.map((s, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
+                            <div className="flex items-center gap-3">
+                              <div className={`h-2 w-2 rounded-full ${s.status === "PRESENT" ? "bg-emerald-500" : "bg-red-500"}`} />
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {new Date(s.date).toLocaleDateString("en-US", {
+                                    weekday: "short",
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </p>
+                                <p className="text-xs text-muted-foreground">{s.className}</p>
+                              </div>
+                            </div>
+                            <Badge variant={s.status === "PRESENT" ? "default" : "destructive"} className="text-xs">
+                              {s.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">No attendance records yet</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="card-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      Upcoming Assignments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {assignments?.upcoming && assignments.upcoming.length > 0 ? (
+                      <div className="space-y-2">
+                        {assignments.upcoming.map((a) => {
+                          const daysLeft = Math.ceil(
+                            (new Date(a.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                          );
+                          return (
+                            <div key={a.id} className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
+                              <div>
+                                <p className="text-sm font-medium">{a.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Due{" "}
+                                  {new Date(a.dueDate).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={daysLeft <= 2 ? "destructive" : "secondary"}
+                                className="text-xs"
+                              >
+                                {daysLeft <= 0 ? "Due today" : `${daysLeft}d left`}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" />
+                        <p className="text-sm text-muted-foreground">All caught up!</p>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

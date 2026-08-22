@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { User, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
+import { User, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 
@@ -15,9 +15,7 @@ export async function getStudentProfile(email: string) {
   await connectDB();
   const { user, student } = await findStudentByEmail(email);
 
-  const classDoc = await import("@/models").then((m) =>
-    m.Class.findOne({ _id: student.classId }).lean()
-  );
+  const classDoc = await Class.findOne({ _id: student.classId }).lean();
 
   return {
     id: student._id,
@@ -46,9 +44,59 @@ export async function getStudentAttendance(email: string) {
   const totalDays = records.length;
   const percentage = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
 
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const monthlyMap = new Map<string, { month: string; present: number; absent: number; total: number }>();
+
+  for (const r of records) {
+    const session = r.sessionId as unknown as { date: string } | null;
+    if (!session?.date) continue;
+    const d = new Date(session.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = monthNames[d.getMonth()];
+    const entry = monthlyMap.get(key) || { month: label, present: 0, absent: 0, total: 0 };
+    if (r.status === "PRESENT") entry.present++;
+    else entry.absent++;
+    entry.total++;
+    monthlyMap.set(key, entry);
+  }
+
+  const monthlyBreakdown = Array.from(monthlyMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([, v]) => ({ month: v.month, present: v.present, absent: v.absent, total: v.total }));
+
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 0;
+  for (let i = records.length - 1; i >= 0; i--) {
+    if (records[i].status === "PRESENT") {
+      tempStreak++;
+    } else {
+      if (i === records.length - 1) currentStreak = 0;
+      longestStreak = Math.max(longestStreak, tempStreak);
+      tempStreak = 0;
+    }
+  }
+  if (records.length > 0 && records[records.length - 1]?.status === "PRESENT") {
+    currentStreak = tempStreak;
+  }
+  longestStreak = Math.max(longestStreak, tempStreak);
+
+  const recentSessions = records.slice(0, 7).map((r) => {
+    const session = r.sessionId as unknown as { date: string; classId?: { name: string } } | null;
+    return {
+      date: session?.date || "",
+      status: r.status,
+      className: session?.classId?.name || "",
+    };
+  });
+
   return {
     records,
     summary: { present: presentCount, absent: absentCount, totalDays, percentage },
+    monthlyBreakdown,
+    recentSessions,
+    streak: { current: currentStreak, longest: longestStreak },
   };
 }
 
@@ -66,15 +114,38 @@ export async function getStudentAssignments(email: string) {
   }).lean();
 
   const submissionMap = new Map(submissions.map((s) => [String(s.assignmentId), s]));
+  const now = new Date();
 
-  return assignments.map((a) => ({
-    id: a._id,
-    title: a.title,
-    description: a.description,
-    dueDate: a.dueDate,
-    totalMarks: a.totalMarks,
-    submission: submissionMap.get(String(a._id)) || null,
-  }));
+  const enriched = assignments.map((a) => {
+    const sub = submissionMap.get(String(a._id));
+    const isOverdue = !sub && new Date(a.dueDate) < now;
+    return {
+      id: a._id,
+      title: a.title,
+      description: a.description,
+      dueDate: a.dueDate,
+      totalMarks: a.totalMarks,
+      submission: sub
+        ? { id: sub._id, status: sub.status, marks: sub.marks }
+        : null,
+      isOverdue,
+    };
+  });
+
+  const submittedCount = enriched.filter((a) => a.submission).length;
+  const pendingCount = enriched.filter((a) => !a.submission && !a.isOverdue).length;
+  const overdueCount = enriched.filter((a) => !a.submission && a.isOverdue).length;
+
+  const upcoming = enriched
+    .filter((a) => !a.submission && new Date(a.dueDate) > now)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 5);
+
+  return {
+    assignments: enriched,
+    summary: { total: enriched.length, submitted: submittedCount, pending: pendingCount, overdue: overdueCount },
+    upcoming,
+  };
 }
 
 export async function getStudentGrades(email: string) {
@@ -112,9 +183,30 @@ export async function getStudentGrades(email: string) {
     ? Math.round((totalMarksObtained / totalPossibleMarks) * 100)
     : 0;
 
+  const distribution = { excellent: 0, good: 0, average: 0, below: 0, unscored: 0 };
+  for (const g of grades) {
+    if (g.status === "NOT_SUBMITTED") distribution.unscored++;
+    else if (g.percentage >= 80) distribution.excellent++;
+    else if (g.percentage >= 60) distribution.good++;
+    else if (g.percentage >= 40) distribution.average++;
+    else distribution.below++;
+  }
+
+  const gradeTrend = grades
+    .filter((g) => g.status !== "NOT_SUBMITTED")
+    .reverse()
+    .map((g) => ({
+      title: g.title.length > 15 ? g.title.slice(0, 15) + "..." : g.title,
+      percentage: g.percentage,
+      marks: g.marks,
+      totalMarks: g.totalMarks,
+    }));
+
   return {
     grades,
     summary: { totalMarksObtained, totalPossibleMarks, overallPercentage },
+    distribution,
+    gradeTrend,
   };
 }
 

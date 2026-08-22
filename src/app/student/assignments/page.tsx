@@ -8,13 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  FileText,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Calendar,
+} from "lucide-react";
 
 interface AssignmentItem {
   id: string;
@@ -27,21 +26,51 @@ interface AssignmentItem {
     status: string;
     marks: number | null;
   } | null;
+  isOverdue: boolean;
+}
+
+interface AssignmentsData {
+  assignments: AssignmentItem[];
+  summary: {
+    total: number;
+    submitted: number;
+    pending: number;
+    overdue: number;
+  };
+}
+
+function getDaysUntil(dueDate: string) {
+  const now = new Date();
+  const due = new Date(dueDate);
+  const diff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function getDueLabel(dueDate: string, submitted: boolean) {
+  if (submitted) return null;
+  const days = getDaysUntil(dueDate);
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, variant: "destructive" as const };
+  if (days === 0) return { text: "Due today", variant: "destructive" as const };
+  if (days <= 2) return { text: `${days}d left`, variant: "secondary" as const };
+  return { text: `${days}d left`, variant: "outline" as const };
 }
 
 export default function StudentAssignments() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
+  const [data, setData] = useState<AssignmentsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       fetch("/api/student/assignments")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => setAssignments(json.data || []))
-        .catch(() => setAssignments([]))
+        .then((r) => {
+          if (!r.ok) throw new Error();
+          return r.json();
+        })
+        .then((json) => setData(json.data))
+        .catch(() => setData(null))
         .finally(() => setLoading(false));
     }
   }, [status, router]);
@@ -57,67 +86,131 @@ export default function StudentAssignments() {
   return (
     <StudentShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">My Assignments</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">My Assignments</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">View and track your assignment progress</p>
+        </div>
 
-        <Card>
-          <CardHeader>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)
+            : data?.summary && (
+                <>
+                  <Card className="card-shadow">
+                    <CardContent className="flex items-center gap-4 p-5">
+                      <div className="rounded-xl bg-blue-500/10 p-3">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total</p>
+                        <p className="text-2xl font-bold">{data.summary.total}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="card-shadow">
+                    <CardContent className="flex items-center gap-4 p-5">
+                      <div className="rounded-xl bg-emerald-500/10 p-3">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submitted</p>
+                        <p className="text-2xl font-bold">{data.summary.submitted}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="card-shadow">
+                    <CardContent className="flex items-center gap-4 p-5">
+                      <div className="rounded-xl bg-amber-500/10 p-3">
+                        <Clock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending</p>
+                        <p className="text-2xl font-bold">{data.summary.pending}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="card-shadow">
+                    <CardContent className="flex items-center gap-4 p-5">
+                      <div className="rounded-xl bg-red-500/10 p-3">
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overdue</p>
+                        <p className="text-2xl font-bold">{data.summary.overdue}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+        </div>
+
+        <Card className="card-shadow">
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg">All Assignments</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-32" />
+                ))}
               </div>
-            ) : assignments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No assignments yet.</p>
+            ) : data?.assignments.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No assignments yet.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Total Marks</TableHead>
-                    <TableHead>Marks</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assignments.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{a.title}</p>
-                          {a.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">{a.description}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {data?.assignments.map((a) => {
+                  const submitted = !!a.submission;
+                  const dueLabel = getDueLabel(a.dueDate, submitted);
+                  return (
+                    <div
+                      key={a.id}
+                      className={`rounded-xl border p-4 transition-all hover:shadow-md ${
+                        a.isOverdue && !submitted
+                          ? "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/20"
+                          : "border-border/50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-sm leading-tight">{a.title}</h3>
+                        <Badge
+                          variant={submitted ? "default" : a.isOverdue ? "destructive" : "secondary"}
+                          className="shrink-0 text-xs"
+                        >
+                          {submitted ? "Submitted" : "Pending"}
+                        </Badge>
+                      </div>
+                      {a.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{a.description}</p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>
+                            {new Date(a.dueDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {submitted && a.submission?.marks != null && (
+                            <span className="font-semibold text-foreground">
+                              {a.submission.marks}/{a.totalMarks}
+                            </span>
+                          )}
+                          {!submitted && dueLabel && (
+                            <Badge variant={dueLabel.variant} className="text-[10px] px-1.5 py-0">
+                              {dueLabel.text}
+                            </Badge>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(a.dueDate).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell>{a.totalMarks}</TableCell>
-                      <TableCell>{a.submission?.marks ?? "-"}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            a.submission?.status === "SUBMITTED"
-                              ? "default"
-                              : a.submission?.status === "LATE"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {a.submission?.status || "NOT_SUBMITTED"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CardContent>
         </Card>
