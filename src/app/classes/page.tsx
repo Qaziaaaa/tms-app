@@ -30,25 +30,19 @@ import {
 import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2, Calendar } from "lucide-react";
 import { toast } from "sonner";
-
-interface Class {
-  id: string;
-  name: string;
-  department: string;
-  batch: string;
-  schedule: string | null;
-  studentCount: number;
-}
+import { getClasses, createClass, updateClass, deleteClass } from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type { ClassDTO } from "@/types/api";
 
 export default function ClassesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const deleteIdRef = useRef<string | null>(null);
-  const [editClass, setEditClass] = useState<Class | null>(null);
+  const [editClass, setEditClass] = useState<ClassDTO | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
@@ -81,10 +75,10 @@ export default function ClassesPage() {
   }, [status, router]);
 
   async function fetchClasses() {
-    const res = await fetch("/api/classes");
-    if (res.ok) {
-      const json = await res.json();
-      setClasses(json.data);
+    try {
+      setClasses(await getClasses());
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setLoading(false);
   }
@@ -98,7 +92,7 @@ export default function ClassesPage() {
     setDialogOpen(true);
   }
 
-  function openEdit(cls: Class) {
+  function openEdit(cls: ClassDTO) {
     setEditClass(cls);
     setName(cls.name);
     setDepartment(cls.department);
@@ -110,19 +104,14 @@ export default function ClassesPage() {
   async function handleSave() {
     setSaving(true);
     const body = { name, department, batch, schedule: schedule || undefined };
-    const url = editClass ? `/api/classes/${editClass.id}` : "/api/classes";
-    const method = editClass ? "PUT" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
+    try {
+      if (editClass) await updateClass(editClass.id, body);
+      else await createClass(body);
       toast.success(editClass ? "Class updated" : "Class created");
       setDialogOpen(false);
       fetchClasses();
-    } else {
-      toast.error("Failed to save class");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setSaving(false);
   }
@@ -132,12 +121,12 @@ export default function ClassesPage() {
     if (!id) return;
     deleteIdRef.current = null;
     setDeleteId(null);
-    const res = await fetch(`/api/classes/${id}`, { method: "DELETE" });
-    if (res.ok) {
+    try {
+      await deleteClass(id);
       toast.success("Class deleted");
       fetchClasses();
-    } else {
-      toast.error("Failed to delete class");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   }
 

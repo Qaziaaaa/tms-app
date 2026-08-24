@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { changePassword } from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
 
 export default function StudentPassword() {
   const { data: session, status } = useSession();
@@ -42,27 +44,13 @@ export default function StudentPassword() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/student/password", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      if (!res.ok) {
-        setMessage({ type: "error", text: "Failed to change password" });
-        return;
-      }
-      const json = await res.json();
-
-      if (json.success) {
-        setMessage({ type: "success", text: "Password changed successfully" });
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        setMessage({ type: "error", text: json.message || "Failed to change password" });
-      }
-    } catch {
-      setMessage({ type: "error", text: "An error occurred" });
+      await changePassword({ currentPassword, newPassword });
+      setMessage({ type: "success", text: "Password changed successfully" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setMessage({ type: "error", text: getErrorMessage(err) });
     } finally {
       setLoading(false);
     }

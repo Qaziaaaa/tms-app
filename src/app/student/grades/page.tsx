@@ -18,27 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TrendingUp, Award, BarChart3 } from "lucide-react";
-
-interface GradeItem {
-  assignmentId: string;
-  title: string;
-  dueDate: string;
-  totalMarks: number;
-  marks: number;
-  status: string;
-  percentage: number;
-}
-
-interface GradesData {
-  grades: GradeItem[];
-  summary: {
-    totalMarksObtained: number;
-    totalPossibleMarks: number;
-    overallPercentage: number;
-  };
-  distribution: { excellent: number; good: number; average: number; below: number; unscored: number };
-  gradeTrend: { title: string; percentage: number; marks: number; totalMarks: number }[];
-}
+import { getStudentGrades } from "@/lib/api";
+import type { PortalGradesDTO } from "@/types/api";
 
 const barConfig = {
   percentage: { label: "Score %", color: "var(--clr-blue)" },
@@ -64,18 +45,14 @@ function getGradeBadge(percentage: number) {
 export default function StudentGrades() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [data, setData] = useState<GradesData | null>(null);
+  const [data, setData] = useState<PortalGradesDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/student/grades")
-        .then((r) => {
-          if (!r.ok) throw new Error();
-          return r.json();
-        })
-        .then((json) => setData(json.data))
+      getStudentGrades()
+        .then(setData)
         .catch(() => setData(null))
         .finally(() => setLoading(false));
     }

@@ -10,19 +10,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SearchBar } from "@/components/ui/search-bar";
 import { BarChart3 } from "lucide-react";
-
-interface ClassItem { id: string; name: string; department: string; }
-interface AttendanceReport { id: string; rollNumber: string; name: string; totalSessions: number; presentCount: number; attendancePercentage: number; }
-interface SubmissionReport { id: string; rollNumber: string; name: string; totalAssignments: number; submittedCount: number; notSubmittedCount: number; averageMarks: number; }
+import { getClasses, getReport } from "@/lib/api";
+import type {
+  ClassDTO,
+  AttendanceReportRow,
+  SubmissionReportRow,
+  ReportType,
+} from "@/types/api";
 
 export default function ReportsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [reportType, setReportType] = useState<"attendance" | "submissions">("attendance");
+  const [reportType, setReportType] = useState<ReportType>("attendance");
   const [loading, setLoading] = useState(true);
-  const [reportData, setReportData] = useState<AttendanceReport[] | SubmissionReport[]>([]);
+  const [reportData, setReportData] = useState<AttendanceReportRow[] | SubmissionReportRow[]>([]);
   const [loadingReport, setLoadingReport] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -37,10 +40,8 @@ export default function ReportsPage() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (data.length > 0) setSelectedClassId(data[0].id);
         })
@@ -51,17 +52,19 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (selectedClassId) fetchReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId, reportType]);
 
   async function fetchReport() {
     if (!selectedClassId) return;
     setLoadingReport(true);
     setReportData([]);
-    const res = await fetch(`/api/reports?classId=${selectedClassId}&type=${reportType}`);
-    if (res.ok) {
-      const json = await res.json();
-      setReportData(json.data.students || []);
-    } else setReportData([]);
+    try {
+      const report = await getReport(selectedClassId, reportType);
+      setReportData(report.students || []);
+    } catch {
+      setReportData([]);
+    }
     setLoadingReport(false);
   }
 
@@ -147,7 +150,7 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(filteredData as AttendanceReport[]).map(r => (
+                    {(filteredData as AttendanceReportRow[]).map(r => (
                       <TableRow key={r.id}>
                         <TableCell><Badge variant="outline">{r.rollNumber}</Badge></TableCell>
                         <TableCell className="font-medium">{r.name}</TableCell>
@@ -172,7 +175,7 @@ export default function ReportsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(filteredData as SubmissionReport[]).map(r => (
+                    {(filteredData as SubmissionReportRow[]).map(r => (
                       <TableRow key={r.id}>
                         <TableCell><Badge variant="outline">{r.rollNumber}</Badge></TableCell>
                         <TableCell className="font-medium">{r.name}</TableCell>

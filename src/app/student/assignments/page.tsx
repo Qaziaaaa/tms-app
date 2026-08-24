@@ -14,30 +14,8 @@ import {
   AlertTriangle,
   Calendar,
 } from "lucide-react";
-
-interface AssignmentItem {
-  id: string;
-  title: string;
-  description: string | null;
-  dueDate: string;
-  totalMarks: number;
-  submission: {
-    id: string;
-    status: string;
-    marks: number | null;
-  } | null;
-  isOverdue: boolean;
-}
-
-interface AssignmentsData {
-  assignments: AssignmentItem[];
-  summary: {
-    total: number;
-    submitted: number;
-    pending: number;
-    overdue: number;
-  };
-}
+import { getStudentAssignments } from "@/lib/api";
+import type { PortalAssignmentsDTO } from "@/types/api";
 
 function getDaysUntil(dueDate: string) {
   const now = new Date();
@@ -58,18 +36,14 @@ function getDueLabel(dueDate: string, submitted: boolean) {
 export default function StudentAssignments() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [data, setData] = useState<AssignmentsData | null>(null);
+  const [data, setData] = useState<PortalAssignmentsDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/student/assignments")
-        .then((r) => {
-          if (!r.ok) throw new Error();
-          return r.json();
-        })
-        .then((json) => setData(json.data))
+      getStudentAssignments()
+        .then(setData)
         .catch(() => setData(null))
         .finally(() => setLoading(false));
     }

@@ -17,40 +17,13 @@ import {
   BookOpen, TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-
-interface DashboardData {
-  totalClasses: number;
-  totalStudents: number;
-  totalSessions: number;
-  totalAssignments: number;
-  todayAttendance: { present: number; absent: number };
-  recentAttendance: Array<{
-    id: string;
-    date: string;
-    classId: { name: string };
-    recordCount: number;
-    presentCount: number;
-  }>;
-  classesWithStats: Array<{
-    id: string;
-    name: string;
-    department: string;
-    studentCount: number;
-    sessionCount: number;
-    averageAttendance: number;
-  }>;
-  recentStudents: Array<{
-    id: string;
-    name: string;
-    email: string;
-    classId?: { name: string };
-  }>;
-}
+import { getDashboard } from "@/lib/api";
+import type { DashboardDataDTO } from "@/types/api";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<DashboardDataDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [attendanceSearch, setAttendanceSearch] = useState("");
@@ -59,10 +32,7 @@ export default function DashboardPage() {
   const loadDashboard = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) setLoading(true);
-      const res = await fetch("/api/dashboard");
-      if (!res.ok) throw new Error("Failed to load dashboard");
-      const json = await res.json();
-      setData(json.data);
+      setData(await getDashboard());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load dashboard data");
     } finally {
@@ -276,7 +246,7 @@ export default function DashboardPage() {
                   ) : (data?.recentStudents || []).length === 0 ? (
                     <p className="px-4 py-8 text-center text-xs text-muted-foreground">No students yet</p>
                   ) : (
-                    data?.recentStudents.map((s) => (
+                    (data?.recentStudents ?? []).map((s) => (
                       <div key={s.id} className="flex items-center justify-between gap-2 px-3 py-2.5 border-b last:border-0 hover:bg-muted/50">
                         <div className="flex min-w-0 items-center gap-2">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-clr-blue text-[11px] font-semibold text-white">

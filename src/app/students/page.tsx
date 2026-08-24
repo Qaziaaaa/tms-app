@@ -17,21 +17,28 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
-
-interface ClassItem { id: string; name: string; department: string; batch: string; }
-interface Student { id: string; rollNumber: string; name: string; classId: string; }
+import {
+  getClasses,
+  getStudents,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+  importStudents,
+} from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type { ClassDTO, StudentDTO } from "@/types/api";
 
 export default function StudentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editStudent, setEditStudent] = useState<Student | null>(null);
+  const [editStudent, setEditStudent] = useState<StudentDTO | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -53,10 +60,8 @@ export default function StudentsPage() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (data.length > 0) setSelectedClassId(data[0].id);
         })
@@ -67,15 +72,17 @@ export default function StudentsPage() {
 
   useEffect(() => {
     if (selectedClassId) fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId]);
 
   async function fetchStudents() {
     if (!selectedClassId) return;
     setLoadingStudents(true);
-    const res = await fetch(`/api/students?classId=${selectedClassId}&pageSize=200`);
-    if (res.ok) {
-      const json = await res.json();
-      setStudents(json.data.students);
+    try {
+      const result = await getStudents(selectedClassId, { pageSize: 200 });
+      setStudents(result.students);
+    } catch {
+      setStudents([]);
     }
     setLoadingStudents(false);
   }
@@ -87,7 +94,7 @@ export default function StudentsPage() {
     setDialogOpen(true);
   }
 
-  function openEdit(s: Student) {
+  function openEdit(s: StudentDTO) {
     setEditStudent(s);
     setRollNumber(s.rollNumber);
     setName(s.name);
@@ -97,28 +104,27 @@ export default function StudentsPage() {
   async function handleSave() {
     setSaving(true);
     const body = { rollNumber, name, classId: selectedClassId };
-    const url = editStudent ? `/api/students/${editStudent.id}` : "/api/students";
-    const method = editStudent ? "PUT" : "POST";
-    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) {
+    try {
+      if (editStudent) await updateStudent(editStudent.id, body);
+      else await createStudent(body);
       toast.success(editStudent ? "Student updated" : "Student added");
       setDialogOpen(false);
       fetchStudents();
-    } else {
-      try {
-        const data = await res.json();
-        const msg = data.errors?.length ? data.errors.join(", ") : data.message || "Failed to save student";
-        toast.error(msg);
-      } catch { toast.error("Failed to save student"); }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setSaving(false);
   }
 
   async function handleDelete() {
     if (!deleteId) return;
-    const res = await fetch(`/api/students/${deleteId}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Student removed"); fetchStudents(); }
-    else toast.error("Failed to delete student");
+    try {
+      await deleteStudent(deleteId);
+      toast.success("Student removed");
+      fetchStudents();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
     setDeleteId(null);
   }
 
@@ -131,18 +137,13 @@ export default function StudentsPage() {
       return { rollNumber: parts[0] || "", name: parts.slice(1).join(" ") || "" };
     }).filter(s => s.rollNumber && s.name);
 
-    const res = await fetch("/api/students/bulk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ classId: selectedClassId, students: studentsList }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      toast.success(`Imported ${data.data?.created || studentsList.length} students`);
+    try {
+      const result = await importStudents({ classId: selectedClassId, students: studentsList });
+      toast.success(`Imported ${result.created || studentsList.length} students`);
       setCsvText("");
       fetchStudents();
-    } else {
-      toast.error("Failed to import students");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setImporting(false);
   }

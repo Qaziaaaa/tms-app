@@ -24,9 +24,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  getClasses,
+  getStudents,
+  getSessions,
+  getSessionById,
+  createSession as createSessionApi,
+  saveAttendanceRecords,
+} from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type { ClassDTO, StudentDTO } from "@/types/api";
 
-interface ClassItem { id: string; name: string; department: string; }
-interface Student { id: string; rollNumber: string; name: string; }
 interface RecordItem { studentId: string; status: "PRESENT" | "ABSENT" }
 
 interface MarkAttendanceDialogProps {
@@ -37,10 +45,10 @@ interface MarkAttendanceDialogProps {
 }
 
 export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSaved }: MarkAttendanceDialogProps) {
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState(preselectedClassId || "");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentDTO[]>([]);
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,10 +66,8 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
   useEffect(() => {
     if (open) {
       reset();
-      fetch("/api/classes")
-        .then((r) => (r.ok ? r.json() : { data: [] }))
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (preselectedClassId) setSelectedClassId(preselectedClassId);
           else if (data.length > 0) setSelectedClassId(data[0].id);
@@ -78,27 +84,24 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
     const today = new Date().toISOString().split("T")[0];
 
     Promise.all([
-      fetch(`/api/attendance/sessions?classId=${selectedClassId}`).then((r) => r.ok ? r.json() : { data: [] }),
-      fetch(`/api/students?classId=${selectedClassId}&pageSize=200`).then((r) => r.ok ? r.json() : { data: { students: [] } }),
+      getSessions(selectedClassId),
+      getStudents(selectedClassId, { pageSize: 200 }),
     ])
-      .then(([sessJson, studJson]) => {
-        const sessions = (sessJson.data || []) as Array<{ id: string; date: string }>;
-        const studs = ((studJson.data?.students || []) as Student[]).map((s) => ({
+      .then(async ([sessions, studentList]) => {
+        const studs: StudentDTO[] = (studentList.students || []).map((s) => ({
           id: s.id, rollNumber: s.rollNumber, name: s.name,
         }));
         setStudents(studs);
-        const todaySession = sessions.find((s) => s.date.startsWith(today));
+        const todaySession = (sessions || []).find((s) => s.date.startsWith(today));
         if (todaySession) {
           setSessionId(todaySession.id);
-          fetch(`/api/attendance/sessions/${todaySession.id}`)
-            .then((r) => (r.ok ? r.json() : { data: { records: [] } }))
-            .then((json) => {
-              const existing: RecordItem[] = (json.data?.records || []).map(
-                (r: { studentId: string; status: string }) => ({ studentId: r.studentId, status: r.status as "PRESENT" | "ABSENT" })
-              );
-              setRecords(existing);
-            })
-            .catch(() => {});
+          try {
+            const detail = await getSessionById(todaySession.id);
+            const existing: RecordItem[] = (detail.records || []).map(
+              (r) => ({ studentId: r.studentId, status: r.status })
+            );
+            setRecords(existing);
+          } catch {}
         }
       })
       .finally(() => setLoading(false));
@@ -145,21 +148,11 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
     if (!selectedClassId) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/attendance/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ classId: selectedClassId, date: new Date().toISOString() }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setSessionId(json.data.id);
-        toast.success("Session created");
-      } else {
-        const err = await res.json().catch(() => null);
-        toast.error(err?.errors?.join(", ") || err?.message || "Failed to create session");
-      }
-    } catch {
-      toast.error("Failed to create session");
+      const session = await createSessionApi({ classId: selectedClassId, date: new Date().toISOString() });
+      setSessionId(session.id);
+      toast.success("Session created");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setCreating(false);
     }
@@ -169,20 +162,12 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
     if (!sessionId) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/attendance/records", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, records }),
-      });
-      if (res.ok) {
-        toast.success("Attendance saved successfully");
-        onSaved?.();
-        onClose();
-      } else {
-        toast.error("Failed to save attendance");
-      }
-    } catch {
-      toast.error("Failed to save attendance");
+      await saveAttendanceRecords({ sessionId, records });
+      toast.success("Attendance saved successfully");
+      onSaved?.();
+      onClose();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }

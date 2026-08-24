@@ -11,49 +11,24 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Brain, AlertTriangle, ShieldCheck, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
-
-interface ClassItem { id: string; name: string; department: string; }
-interface StudentInsight {
-  studentId: string;
-  name: string;
-  rollNumber: string;
-  attendancePercentage: number;
-  submissionRate: number;
-  averageMarks: number;
-  totalSessions: number;
-  sessionsAttended: number;
-  totalAssignments: number;
-  assignmentsSubmitted: number;
-  riskLevel: "low" | "medium" | "high";
-  aiAnalysis: string;
-}
-interface ClassInsight {
-  classId: string;
-  className: string;
-  totalStudents: number;
-  averageAttendance: number;
-  averageSubmissionRate: number;
-  atRiskStudents: number;
-  cramStudents: StudentInsight[];
-  students: StudentInsight[];
-}
+import { getClasses, getInsights } from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type { ClassDTO, ClassInsightDTO } from "@/types/api";
 
 export default function InsightsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [insights, setInsights] = useState<ClassInsight | null>(null);
+  const [insights, setInsights] = useState<ClassInsightDTO | null>(null);
   const [loadingInsights, setLoadingInsights] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (data.length > 0) setSelectedClassId(data[0].id);
         })
@@ -66,18 +41,17 @@ export default function InsightsPage() {
     if (!selectedClassId) return;
     setLoadingInsights(true);
     setInsights(null);
-    const res = await fetch(`/api/ai?classId=${selectedClassId}`);
-    if (res.ok) {
-      const json = await res.json();
-      setInsights(json.data);
-    } else {
-      toast.error("Failed to generate AI insights");
+    try {
+      setInsights(await getInsights(selectedClassId));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setLoadingInsights(false);
   }
 
   useEffect(() => {
     if (selectedClassId) fetchInsights();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId]);
 
   function getRiskBadge(level: string) {

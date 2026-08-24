@@ -13,11 +13,19 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  getClasses,
+  getStudents,
+  getSessions,
+  getSessionById,
+  createSession as createSessionApi,
+  deleteSession as deleteSessionApi,
+  saveAttendanceRecords,
+} from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type { ClassDTO, StudentDTO, AttendanceSessionDTO } from "@/types/api";
 
-interface ClassItem { id: string; name: string; department: string; }
-interface Session { id: string; date: string; recordCount: number; }
-interface Student { id: string; rollNumber: string; name: string; }
-interface RecordItem { studentId: string; status: string; }
+interface RecordItem { studentId: string; status: "PRESENT" | "ABSENT"; }
 
 function AttendanceContent() {
   const { data: session, status } = useSession();
@@ -25,11 +33,11 @@ function AttendanceContent() {
   const searchParams = useSearchParams();
   const preselectedClass = searchParams.get("classId") || "";
 
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState(preselectedClass);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<AttendanceSessionDTO[]>([]);
+  const [students, setStudents] = useState<StudentDTO[]>([]);
+  const [activeSession, setActiveSession] = useState<AttendanceSessionDTO | null>(null);
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(false);
@@ -48,10 +56,8 @@ function AttendanceContent() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (preselectedClass) setSelectedClassId(preselectedClass);
           else if (data.length > 0) setSelectedClassId(data[0].id);
@@ -67,62 +73,54 @@ function AttendanceContent() {
       setActiveSession(null);
       setRecords([]);
       Promise.all([
-        fetch(`/api/attendance/sessions?classId=${selectedClassId}`).then(r => r.ok ? r.json() : { data: [] }),
-        fetch(`/api/students?classId=${selectedClassId}&pageSize=200`).then(r => r.ok ? r.json() : { data: { students: [] } }),
-      ]).then(([sessJson, studJson]) => {
-        setSessions(sessJson.data || []);
-        setStudents((studJson.data.students || []).map((s: Student) => ({ id: s.id, rollNumber: s.rollNumber, name: s.name })));
+        getSessions(selectedClassId),
+        getStudents(selectedClassId, { pageSize: 200 }),
+      ]).then(([sessionList, studentList]) => {
+        setSessions(sessionList || []);
+        setStudents(studentList.students || []);
         setLoadingSessions(false);
-      });
+      }).catch(() => setLoadingSessions(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId]);
 
   async function createSession() {
     if (!selectedClassId) return;
-    const res = await fetch("/api/attendance/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ classId: selectedClassId, date: new Date().toISOString() }),
-    });
-    if (res.ok) {
-      const s = await res.json();
+    try {
+      const s = await createSessionApi({ classId: selectedClassId, date: new Date().toISOString() });
       toast.success("Session created");
-      selectSession(s.data);
+      selectSession(s);
       fetchSessions();
-    } else {
-      try { const data = await res.json(); toast.error(data.errors?.length ? data.errors.join(", ") : data.message || "Failed to create session"); } catch { toast.error("Failed to create session"); }
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
   }
 
   async function fetchSessions() {
     if (!selectedClassId) return;
-    const res = await fetch(`/api/attendance/sessions?classId=${selectedClassId}`);
-    if (res.ok) {
-      const json = await res.json();
-      setSessions(json.data || []);
-    }
+    const sessionList = await getSessions(selectedClassId);
+    setSessions(sessionList || []);
   }
 
-  async function selectSession(s: Session) {
+  async function selectSession(s: AttendanceSessionDTO) {
     setActiveSession(s);
-    const res = await fetch(`/api/attendance/sessions/${s.id}`);
-    if (res.ok) {
-      const json = await res.json();
-      const existing: RecordItem[] = (json.data.records || []).map((r: { studentId: string; status: string }) => ({
+    try {
+      const detail = await getSessionById(s.id);
+      const existing: RecordItem[] = (detail.records || []).map((r) => ({
         studentId: r.studentId,
         status: r.status,
       }));
       setRecords(existing);
-    } else {
+    } catch {
       setRecords(students.map(st => ({ studentId: st.id, status: "PRESENT" })));
     }
   }
 
-  function markAll(status: string) {
+  function markAll(status: "PRESENT" | "ABSENT") {
     setRecords(students.map(s => ({ studentId: s.id, status })));
   }
 
-  function toggleStatus(studentId: string, status: string) {
+  function toggleStatus(studentId: string, status: "PRESENT" | "ABSENT") {
     setRecords(prev => {
       const existing = prev.find(r => r.studentId === studentId);
       if (existing) return prev.map(r => r.studentId === studentId ? { ...r, status } : r);
@@ -133,23 +131,22 @@ function AttendanceContent() {
   async function saveAttendance() {
     if (!activeSession) return;
     setSaving(true);
-    const res = await fetch("/api/attendance/records", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sessionId: activeSession.id, records }),
-    });
-    if (res.ok) { toast.success("Attendance saved"); }
-    else { toast.error("Failed to save attendance"); }
+    try {
+      await saveAttendanceRecords({ sessionId: activeSession.id, records });
+      toast.success("Attendance saved");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
     setSaving(false);
   }
 
   async function deleteSession() {
     if (!deleteId) return;
-    const res = await fetch(`/api/attendance/sessions/${deleteId}`, { method: "DELETE" });
-    if (res.ok) {
+    const deleted = await deleteSessionApi(deleteId).catch(() => null);
+    if (deleted) {
       toast.success("Session deleted");
       if (activeSession?.id === deleteId) { setActiveSession(null); setRecords([]); }
-      fetchSessions();
+      fetchSessions().catch(() => undefined);
     }
     setDeleteId(null);
   }

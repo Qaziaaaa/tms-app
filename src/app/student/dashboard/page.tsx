@@ -21,30 +21,18 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-interface Profile {
-  id: string;
-  name: string;
-  email: string;
-  rollNumber: string;
-  class: { id: string; name: string; department: string; batch: string };
-}
-
-interface AttendanceData {
-  summary: { present: number; absent: number; totalDays: number; percentage: number };
-  monthlyBreakdown: { month: string; present: number; absent: number; total: number }[];
-  recentSessions: { date: string; status: string; className: string }[];
-  streak: { current: number; longest: number };
-}
-
-interface GradesData {
-  summary: { totalMarksObtained: number; totalPossibleMarks: number; overallPercentage: number };
-  gradeTrend: { title: string; percentage: number; marks: number; totalMarks: number }[];
-}
-
-interface AssignmentsData {
-  summary: { total: number; submitted: number; pending: number; overdue: number };
-  upcoming: { id: string; title: string; dueDate: string; totalMarks: number }[];
-}
+import {
+  getStudentProfile,
+  getStudentAttendance,
+  getStudentGrades,
+  getStudentAssignments,
+} from "@/lib/api";
+import type {
+  PortalProfileDTO,
+  PortalAttendanceDTO,
+  PortalGradesDTO,
+  PortalAssignmentsDTO,
+} from "@/types/api";
 
 const attendanceChartConfig = {
   present: { label: "Present", color: "var(--clr-green)" },
@@ -58,10 +46,10 @@ const gradeChartConfig = {
 export default function StudentDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceData | null>(null);
-  const [grades, setGrades] = useState<GradesData | null>(null);
-  const [assignments, setAssignments] = useState<AssignmentsData | null>(null);
+  const [profile, setProfile] = useState<PortalProfileDTO | null>(null);
+  const [attendance, setAttendance] = useState<PortalAttendanceDTO | null>(null);
+  const [grades, setGrades] = useState<PortalGradesDTO | null>(null);
+  const [assignments, setAssignments] = useState<PortalAssignmentsDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,32 +57,20 @@ export default function StudentDashboard() {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
       Promise.all([
-        fetch("/api/student/profile").then((r) => {
-          if (!r.ok) throw new Error("Failed to load profile");
-          return r.json();
-        }),
-        fetch("/api/student/attendance").then((r) => {
-          if (!r.ok) throw new Error("Failed to load attendance");
-          return r.json();
-        }),
-        fetch("/api/student/grades").then((r) => {
-          if (!r.ok) throw new Error("Failed to load grades");
-          return r.json();
-        }),
-        fetch("/api/student/assignments").then((r) => {
-          if (!r.ok) throw new Error("Failed to load assignments");
-          return r.json();
-        }),
+        getStudentProfile(),
+        getStudentAttendance(),
+        getStudentGrades(),
+        getStudentAssignments(),
       ])
-        .then(([profileRes, attendanceRes, gradesRes, assignmentsRes]) => {
-          setProfile(profileRes.data);
-          setAttendance(attendanceRes.data);
-          setGrades(gradesRes.data);
-          setAssignments(assignmentsRes.data);
+        .then(([profileData, attendanceData, gradesData, assignmentsData]) => {
+          setProfile(profileData);
+          setAttendance(attendanceData);
+          setGrades(gradesData);
+          setAssignments(assignmentsData);
           setLoading(false);
         })
         .catch((e) => {
-          setError(e.message || "Failed to load dashboard data");
+          setError(e instanceof Error ? e.message : "Failed to load dashboard data");
           setLoading(false);
         });
     }

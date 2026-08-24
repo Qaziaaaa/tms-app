@@ -17,22 +17,33 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-
-interface ClassItem { id: string; name: string; }
-interface Assignment { id: string; title: string; description: string | null; dueDate: string; totalMarks: number; submissionCount: number; }
-interface Submission { id: string; studentId: string; status: string; marks: number | null; student: { id: string; name: string; rollNumber: string }; }
+import {
+  getClasses,
+  getAssignments,
+  getAssignmentById,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment as deleteAssignmentApi,
+  saveSubmissions as saveSubmissionsApi,
+} from "@/lib/api";
+import { getErrorMessage } from "@/hooks/use-api-data";
+import type {
+  ClassDTO,
+  AssignmentDTO,
+  SubmissionDTO,
+} from "@/types/api";
 
 export default function AssignmentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [classes, setClasses] = useState<ClassDTO[]>([]);
   const [selectedClassId, setSelectedClassId] = useState("");
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editAssignment, setEditAssignment] = useState<Assignment | null>(null);
+  const [editAssignment, setEditAssignment] = useState<AssignmentDTO | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const deleteIdRef = useRef<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -42,8 +53,8 @@ export default function AssignmentsPage() {
   const [dueDate, setDueDate] = useState("");
   const [totalMarks, setTotalMarks] = useState("10");
 
-  const [activeAssignment, setActiveAssignment] = useState<Assignment | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [activeAssignment, setActiveAssignment] = useState<AssignmentDTO | null>(null);
+  const [submissions, setSubmissions] = useState<SubmissionDTO[]>([]);
   const [subSaving, setSubSaving] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -56,10 +67,8 @@ export default function AssignmentsPage() {
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/classes")
-        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
-        .then((json) => {
-          const data = json.data as ClassItem[];
+      getClasses()
+        .then((data) => {
           setClasses(data);
           if (data.length > 0) setSelectedClassId(data[0].id);
         })
@@ -70,6 +79,7 @@ export default function AssignmentsPage() {
 
   useEffect(() => {
     if (selectedClassId) fetchAssignments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId]);
 
   async function fetchAssignments() {
@@ -77,10 +87,10 @@ export default function AssignmentsPage() {
     setLoadingAssignments(true);
     setActiveAssignment(null);
     setSubmissions([]);
-    const res = await fetch(`/api/assignments?classId=${selectedClassId}`);
-    if (res.ok) {
-      const json = await res.json();
-      setAssignments(json.data);
+    try {
+      setAssignments(await getAssignments(selectedClassId));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
     }
     setLoadingAssignments(false);
   }
@@ -94,7 +104,7 @@ export default function AssignmentsPage() {
     setDialogOpen(true);
   }
 
-  function openEdit(a: Assignment) {
+  function openEdit(a: AssignmentDTO) {
     setEditAssignment(a);
     setTitle(a.title);
     setDescription(a.description || "");
@@ -106,11 +116,15 @@ export default function AssignmentsPage() {
   async function handleSave() {
     setSaving(true);
     const body = { classId: selectedClassId, title, description: description || undefined, dueDate, totalMarks: parseInt(totalMarks) };
-    const url = editAssignment ? `/api/assignments/${editAssignment.id}` : "/api/assignments";
-    const method = editAssignment ? "PUT" : "POST";
-    const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (res.ok) { toast.success(editAssignment ? "Assignment updated" : "Assignment created"); setDialogOpen(false); fetchAssignments(); }
-    else toast.error("Failed to save assignment");
+    try {
+      if (editAssignment) await updateAssignment(editAssignment.id, body);
+      else await createAssignment(body);
+      toast.success(editAssignment ? "Assignment updated" : "Assignment created");
+      setDialogOpen(false);
+      fetchAssignments();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
     setSaving(false);
   }
 
@@ -119,16 +133,23 @@ export default function AssignmentsPage() {
     if (!id) return;
     deleteIdRef.current = null;
     setDeleteId(null);
-    const res = await fetch(`/api/assignments/${id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Assignment deleted"); if (activeAssignment?.id === id) { setActiveAssignment(null); setSubmissions([]); } fetchAssignments(); }
+    try {
+      await deleteAssignmentApi(id);
+      toast.success("Assignment deleted");
+      if (activeAssignment?.id === id) { setActiveAssignment(null); setSubmissions([]); }
+      fetchAssignments();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
   }
 
-  async function selectAssignment(a: Assignment) {
+  async function selectAssignment(a: AssignmentDTO) {
     setActiveAssignment(a);
-    const res = await fetch(`/api/assignments/${a.id}`);
-    if (res.ok) {
-      const json = await res.json();
-      setSubmissions(json.data.submissions || []);
+    try {
+      const detail = await getAssignmentById(a.id);
+      setSubmissions(detail.submissions || []);
+    } catch {
+      setSubmissions([]);
     }
   }
 
@@ -139,19 +160,18 @@ export default function AssignmentsPage() {
   async function saveSubmissions() {
     if (!activeAssignment) return;
     setSubSaving(true);
-    const res = await fetch(`/api/assignments/${activeAssignment.id}/submissions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await saveSubmissionsApi(activeAssignment.id, {
         submissions: submissions.map(s => ({
           studentId: s.studentId,
-          status: s.status,
+          status: s.status as "SUBMITTED" | "LATE" | "NOT_SUBMITTED",
           marks: s.marks,
         })),
-      }),
-    });
-    if (res.ok) toast.success("Submissions saved");
-    else toast.error("Failed to save submissions");
+      });
+      toast.success("Submissions saved");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
     setSubSaving(false);
   }
 

@@ -18,28 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ClipboardCheck, Flame, TrendingUp } from "lucide-react";
-
-interface AttendanceRecord {
-  id: string;
-  status: string;
-  session: {
-    id: string;
-    date: string;
-    class: { name: string };
-  };
-}
-
-interface AttendanceData {
-  records: AttendanceRecord[];
-  summary: {
-    present: number;
-    absent: number;
-    totalDays: number;
-    percentage: number;
-  };
-  monthlyBreakdown: { month: string; present: number; absent: number; total: number }[];
-  streak: { current: number; longest: number };
-}
+import { getStudentAttendance } from "@/lib/api";
+import type { PortalAttendanceDTO } from "@/types/api";
 
 const chartConfig = {
   present: { label: "Present", color: "var(--clr-green)" },
@@ -49,18 +29,14 @@ const chartConfig = {
 export default function StudentAttendance() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [data, setData] = useState<AttendanceData | null>(null);
+  const [data, setData] = useState<PortalAttendanceDTO | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
-      fetch("/api/student/attendance")
-        .then((r) => {
-          if (!r.ok) throw new Error();
-          return r.json();
-        })
-        .then((json) => setData(json.data))
+      getStudentAttendance()
+        .then(setData)
         .catch(() => setData(null))
         .finally(() => setLoading(false));
     }
