@@ -1,12 +1,12 @@
 import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
-import type { ClassDTO, CreateClassPayload, UpdateClassPayload } from "@/types/api";
+import type { ClassDTO, ClassDetailDTO, CreateClassPayload, UpdateClassPayload } from "@/types/api";
 
 export function getClasses(): Promise<ClassDTO[]> {
   return apiGet<ClassDTO[]>("/classes");
 }
 
-export function getClassById(id: string): Promise<ClassDTO> {
-  return apiGet<ClassDTO>(`/classes/${id}`);
+export function getClassById(id: string): Promise<ClassDetailDTO> {
+  return apiGet<ClassDetailDTO>(`/classes/${id}`);
 }
 
 export function createClass(data: CreateClassPayload): Promise<ClassDTO> {

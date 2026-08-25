@@ -188,15 +188,15 @@ export default function ClassesPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredClasses.map((cls) => (
-              <Card key={cls.id} className="card-shadow card-hover group">
+              <Card key={cls.id} className="card-shadow card-hover group cursor-pointer" onClick={() => router.push(`/classes/${cls.id}`)}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{cls.name}</CardTitle>
+                    <CardTitle className="text-lg hover:underline">{cls.name}</CardTitle>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(cls)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEdit(cls); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { deleteIdRef.current = cls.id; setDeleteId(cls.id); }}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); deleteIdRef.current = cls.id; setDeleteId(cls.id); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -210,7 +210,22 @@ export default function ClassesPage() {
                       <Calendar className="h-3 w-3" /> {cls.schedule}
                     </p>
                   )}
-                  <p className="text-sm text-muted-foreground">{cls.studentCount ?? 0} students</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{cls.studentCount ?? 0} students</span>
+                    <span>&middot;</span>
+                    <span>{cls.sessionCount ?? 0} sessions</span>
+                  </div>
+                  {(cls.sessionCount ?? 0) > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full rounded-full ${(cls.averageAttendance ?? 0) >= 75 ? "bg-green-500" : (cls.averageAttendance ?? 0) >= 50 ? "bg-yellow-500" : "bg-red-500"}`}
+                          style={{ width: `${Math.min(cls.averageAttendance ?? 0, 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-semibold text-muted-foreground">{cls.averageAttendance ?? 0}%</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

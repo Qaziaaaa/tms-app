@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireRole } from "@/lib/auth-helpers";
 import { asyncHandler, ApiError, sendSuccess } from "@/lib/api-utils";
-import { getClassById, updateClass, deleteClass } from "@/services/class.service";
+import { getClassDetail, updateClass, deleteClass } from "@/services/class.service";
 import { updateClassSchema } from "@/lib/validations";
 
 export const GET = asyncHandler(async (request: NextRequest, context) => {
@@ -9,8 +9,8 @@ export const GET = asyncHandler(async (request: NextRequest, context) => {
   if ("error" in auth) return auth.error;
 
   const { id } = await context!.params;
-  const cls = await getClassById(id);
-  return sendSuccess(cls, "Class retrieved successfully");
+  const detail = await getClassDetail(id);
+  return sendSuccess(detail, "Class retrieved successfully");
 });
 
 export const PUT = asyncHandler(async (request: NextRequest, context) => {

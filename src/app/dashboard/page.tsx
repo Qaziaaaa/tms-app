@@ -285,7 +285,7 @@ export default function DashboardPage() {
                   <p className="py-8 text-center text-sm text-muted-foreground col-span-full">No classes yet. Create one to get started.</p>
                 ) : (
                   data?.classesWithStats.map((cls) => (
-                    <div key={cls.id} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+                    <Link key={cls.id} href={`/classes/${cls.id}`} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors cursor-pointer">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{cls.name}</p>
                         <p className="text-[11px] text-muted-foreground">
@@ -301,12 +301,7 @@ export default function DashboardPage() {
                           <span className="text-[10px] font-semibold text-muted-foreground">{cls.averageAttendance}%</span>
                         </div>
                       </div>
-                      <Link href={`/attendance?classId=${cls.id}`}>
-                        <Button size="sm" variant="ghost" className="gap-1 text-xs">
-                          <ClipboardCheck className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    </div>
+                    </Link>
                   ))
                 )}
               </div>

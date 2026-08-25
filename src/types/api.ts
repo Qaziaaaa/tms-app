@@ -15,6 +15,8 @@ export interface ClassDTO {
   batch: string;
   schedule?: string | null;
   studentCount?: number;
+  sessionCount?: number;
+  averageAttendance?: number;
 }
 
 export interface StudentDTO {
@@ -86,6 +88,18 @@ export interface ClassStatsItem {
   studentCount: number;
   sessionCount: number;
   averageAttendance: number;
+}
+
+export interface ClassDetailDTO {
+  class: ClassDTO;
+  totalStudents: number;
+  totalSessions: number;
+  averageAttendance: number;
+  averageMarks: number;
+  totalAssignments: number;
+  recentSessions: { id: string; dateKey: string; date: string; presentCount: number; recordCount: number }[];
+  recentAssignments: { id: string; title: string; dueDate: string; totalMarks: number; submissionCount: number }[];
+  students: { id: string; rollNumber: string; name: string; attendancePct: number; avgMarks: number }[];
 }
 
 export interface DashboardDataDTO {
