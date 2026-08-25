@@ -9,6 +9,15 @@ function convertId(obj: unknown): unknown {
 
   if (Array.isArray(obj)) return obj.map(convertId);
 
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+
+  const documentLike = obj as { toJSON?: () => unknown };
+  if (typeof documentLike.toJSON === "function") {
+    return convertId(documentLike.toJSON.call(obj));
+  }
+
   if (!isPlainObject(obj as object)) {
     if (typeof (obj as { toString?: () => string }).toString === "function") {
       const str = (obj as { toString: () => string }).toString();

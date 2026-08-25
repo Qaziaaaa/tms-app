@@ -8,16 +8,15 @@ test.describe("Teacher: Class Management", () => {
 
   test("dashboard shows class cards", async ({ page }) => {
     await expect(page).toHaveURL(/\/dashboard/);
-    await page.waitForTimeout(2000);
-    const cards = page.locator("[class*='rounded-xl'][class*='border']");
+    await expect(page.getByText("Total Students")).toBeVisible({ timeout: 15000 });
+    const cards = page.locator("[class*='rounded-lg'][class*='border']");
     const count = await cards.count();
     expect(count).toBeGreaterThanOrEqual(1);
   });
 
   test("can navigate to classes page", async ({ page }) => {
     await page.goto("/classes");
-    await page.waitForTimeout(1000);
-    await expect(page.locator("text=Classes")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Classes" })).toBeVisible({ timeout: 15000 });
   });
 
   test("classes page shows seeded classes", async ({ page }) => {
@@ -28,7 +27,7 @@ test.describe("Teacher: Class Management", () => {
     expect(content).toContain("Artificial Intelligence");
   });
 
-  test("can create a new class via API", async ({ page, request }) => {
+  test("can create a new class via API", async ({ request }) => {
     const csrfRes = await request.get("/api/auth/csrf");
     const { csrfToken } = await csrfRes.json();
     await request.post("/api/auth/callback/credentials", {

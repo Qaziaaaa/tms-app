@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
   Table,
   TableBody,

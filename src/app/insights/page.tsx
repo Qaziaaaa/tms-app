@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -37,7 +37,7 @@ export default function InsightsPage() {
     }
   }, [status, router]);
 
-  async function fetchInsights() {
+  const fetchInsights = useCallback(async () => {
     if (!selectedClassId) return;
     setLoadingInsights(true);
     setInsights(null);
@@ -47,12 +47,12 @@ export default function InsightsPage() {
       toast.error(getErrorMessage(err));
     }
     setLoadingInsights(false);
-  }
+  }, [selectedClassId]);
 
   useEffect(() => {
-    if (selectedClassId) fetchInsights();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId]);
+    if (!selectedClassId) return;
+    void Promise.resolve().then(() => fetchInsights());
+  }, [fetchInsights, selectedClassId]);
 
   function getRiskBadge(level: string) {
     if (level === "high") return <Badge className="bg-red-600">High Risk</Badge>;

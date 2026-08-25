@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IAttendanceSession extends Document {
   classId: mongoose.Types.ObjectId;
+  dateKey: string;
   date: Date;
   createdAt: Date;
 }
@@ -9,12 +10,13 @@ export interface IAttendanceSession extends Document {
 const AttendanceSessionSchema = new Schema<IAttendanceSession>(
   {
     classId: { type: Schema.Types.ObjectId, ref: "Class", required: true },
+    dateKey: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     date: { type: Date, required: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-AttendanceSessionSchema.index({ classId: 1, date: 1 }, { unique: true });
+AttendanceSessionSchema.index({ classId: 1, dateKey: 1 }, { unique: true });
 AttendanceSessionSchema.index({ classId: 1 });
 AttendanceSessionSchema.index({ date: 1 });
 

@@ -23,7 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, localDateKey } from "@/lib/utils";
 import {
   getClasses,
   getStudents,
@@ -64,47 +64,65 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
   }, [preselectedClassId]);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
       reset();
-      getClasses()
-        .then((data) => {
-          setClasses(data);
-          if (preselectedClassId) setSelectedClassId(preselectedClassId);
-          else if (data.length > 0) setSelectedClassId(data[0].id);
-        })
-        .catch(() => {});
-    }
+      try {
+        const data = await getClasses();
+        if (cancelled) return;
+        setClasses(data);
+        if (preselectedClassId) setSelectedClassId(preselectedClassId);
+        else if (data.length > 0) setSelectedClassId(data[0].id);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open, preselectedClassId, reset]);
 
   useEffect(() => {
     if (!selectedClassId || !open) return;
-    setLoading(true);
-    setSessionId(null);
-    setRecords([]);
-    const today = new Date().toISOString().split("T")[0];
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setLoading(true);
+      setSessionId(null);
+      setRecords([]);
+      const today = localDateKey();
 
-    Promise.all([
-      getSessions(selectedClassId),
-      getStudents(selectedClassId, { pageSize: 200 }),
-    ])
-      .then(async ([sessions, studentList]) => {
+      try {
+        const [sessions, studentList] = await Promise.all([
+          getSessions(selectedClassId),
+          getStudents(selectedClassId, { pageSize: 200 }),
+        ]);
+        if (cancelled) return;
         const studs: StudentDTO[] = (studentList.students || []).map((s) => ({
           id: s.id, rollNumber: s.rollNumber, name: s.name,
         }));
         setStudents(studs);
-        const todaySession = (sessions || []).find((s) => s.date.startsWith(today));
+        const todaySession = (sessions || []).find((s) => s.dateKey === today);
         if (todaySession) {
           setSessionId(todaySession.id);
           try {
             const detail = await getSessionById(todaySession.id);
+            if (cancelled) return;
             const existing: RecordItem[] = (detail.records || []).map(
               (r) => ({ studentId: r.studentId, status: r.status })
             );
             setRecords(existing);
           } catch {}
         }
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedClassId, open]);
 
   const filteredStudents = useMemo(() => {
@@ -148,7 +166,7 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
     if (!selectedClassId) return;
     setCreating(true);
     try {
-      const session = await createSessionApi({ classId: selectedClassId, date: new Date().toISOString() });
+      const session = await createSessionApi({ classId: selectedClassId, dateKey: localDateKey() });
       setSessionId(session.id);
       toast.success("Session created");
     } catch (err) {

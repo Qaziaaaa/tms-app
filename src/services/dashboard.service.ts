@@ -5,11 +5,10 @@ import { RECENT_ITEMS_LIMIT } from "@/lib/constants";
 export async function getDashboard() {
   await connectDB();
 
-  const [totalClasses, totalStudents, totalSessions, totalAssignments] = await Promise.all([
+  const [totalClasses, totalStudents, totalSessions] = await Promise.all([
     Class.countDocuments(),
     Student.countDocuments(),
     AttendanceSession.countDocuments(),
-    Assignment.countDocuments(),
   ]);
 
   const recentSessions = await AttendanceSession.find()

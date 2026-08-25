@@ -12,7 +12,6 @@ interface MongooseCache {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var mongooseCache: MongooseCache | undefined;
 }
 
@@ -22,10 +21,20 @@ if (!global.mongooseCache) {
   global.mongooseCache = cached;
 }
 
+const TEST_DB_NAME = "tms_test";
+
 export async function connectDB() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
+    if (process.env.TMS_TEST_MODE === "1") {
+      const dbName = new URL(MONGODB_URI!).pathname.replace(/^\//, "") || "(default)";
+      if (dbName !== TEST_DB_NAME) {
+        throw new Error(
+          `SAFETY GUARD: test mode requires the "${TEST_DB_NAME}" database but MONGODB_URI points at "${dbName}".`
+        );
+      }
+    }
     cached.promise = mongoose.connect(MONGODB_URI!, {
       bufferCommands: false,
     });

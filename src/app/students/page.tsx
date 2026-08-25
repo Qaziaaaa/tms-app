@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
-import { Plus, Pencil, Trash2, Upload, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   getClasses,
@@ -139,7 +139,11 @@ export default function StudentsPage() {
 
     try {
       const result = await importStudents({ classId: selectedClassId, students: studentsList });
-      toast.success(`Imported ${result.created || studentsList.length} students`);
+      if (result.skipped > 0) {
+        toast.warning(`Imported ${result.created} students, skipped ${result.skipped} duplicates`);
+      } else {
+        toast.success(`Imported ${result.created} students. Initial password: ${result.initialPassword ?? "Student@123"} — ask students to change it after first login.`);
+      }
       setCsvText("");
       fetchStudents();
     } catch (err) {

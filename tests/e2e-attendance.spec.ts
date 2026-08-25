@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { loginBrowser } from "./fixtures";
+import { loginTeacherBrowser } from "./fixtures";
 
 test.describe("Phase 9: Attendance E2E", () => {
   test.beforeEach(async ({ page }) => {
-    await loginBrowser(page);
+    await loginTeacherBrowser(page);
     await page.goto("/attendance");
     await page.waitForTimeout(500);
   });
@@ -31,7 +31,7 @@ test.describe("Phase 9: Attendance E2E", () => {
     expect(text).toContain("Save Attendance");
   });
 
-  test("selecting a session shows student table with P/A/L buttons", async ({ page }) => {
+  test("selecting a session shows student table with P/A buttons", async ({ page }) => {
     await page.waitForTimeout(1000);
     const sessionItems = page.locator("[class*='cursor-pointer']");
     if (await sessionItems.count() > 0) {

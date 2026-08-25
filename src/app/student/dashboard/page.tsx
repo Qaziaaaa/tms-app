@@ -52,6 +52,11 @@ export default function StudentDashboard() {
   const [assignments, setAssignments] = useState<PortalAssignmentsDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => setNow(Date.now()));
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -292,9 +297,10 @@ export default function StudentDashboard() {
                     {assignments?.upcoming && assignments.upcoming.length > 0 ? (
                       <div className="space-y-2">
                         {assignments.upcoming.map((a) => {
-                          const daysLeft = Math.ceil(
-                            (new Date(a.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                          );
+                          const daysLeft =
+                            now === null
+                              ? null
+                              : Math.ceil((new Date(a.dueDate).getTime() - now) / (1000 * 60 * 60 * 24));
                           return (
                             <div key={a.id} className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2.5">
                               <div>
@@ -308,10 +314,10 @@ export default function StudentDashboard() {
                                 </p>
                               </div>
                               <Badge
-                                variant={daysLeft <= 2 ? "destructive" : "secondary"}
+                                variant={daysLeft !== null && daysLeft <= 2 ? "destructive" : "secondary"}
                                 className="text-xs"
                               >
-                                {daysLeft <= 0 ? "Due today" : `${daysLeft}d left`}
+                                {daysLeft === null ? "…" : daysLeft <= 0 ? "Due today" : `${daysLeft}d left`}
                               </Badge>
                             </div>
                           );

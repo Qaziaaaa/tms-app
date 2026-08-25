@@ -53,16 +53,16 @@ test.describe("Teacher: Assignment Management", () => {
     await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 
     await page.goto("/assignments");
-    await page.waitForTimeout(2000);
-    await expect(page.locator("text=Assignments")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Assignments" })).toBeVisible({ timeout: 15000 });
   });
 
   test("can grade a submission via API", async ({ request }) => {
     await loginTeacherAPI(request);
 
+
     const classesRes = await request.get("/api/classes");
     const classesJson = await classesRes.json();
-    const classId = classesJson.data[0].id;
+    const classId = classesJson.data[classesJson.data.length - 1].id;
 
     const assignmentsRes = await request.get(`/api/assignments?classId=${classId}`);
     const assignmentsJson = await assignmentsRes.json();
@@ -76,9 +76,13 @@ test.describe("Teacher: Assignment Management", () => {
 
     const submissionRes = await request.post(`/api/assignments/${assignment.id}/submissions`, {
       data: {
-        studentId: students[0].id,
-        marks: 85,
-        status: "SUBMITTED",
+        submissions: [
+          {
+            studentId: students[0].id,
+            marks: 85,
+            status: "SUBMITTED",
+          },
+        ],
       },
     });
     expect(submissionRes.ok()).toBeTruthy();

@@ -25,7 +25,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     throw new ApiError(400, "Validation failed", Object.values(parsed.error.flatten().fieldErrors).flat());
   }
 
-  const { classId, date } = parsed.data;
-  const session = await createSession(classId, new Date(date));
+  const { classId, dateKey } = parsed.data;
+  const session = await createSession(classId, dateKey);
   return sendSuccess(session, "Session created successfully", 201);
 });

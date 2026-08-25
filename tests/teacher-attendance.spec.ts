@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginTeacherAPI } from "./fixtures";
+import { loginTeacherAPI, ensureTeacherSession } from "./fixtures";
 
 test.describe("Teacher: Attendance Management", () => {
   test("can get attendance sessions via API", async ({ request }) => {
@@ -15,18 +15,10 @@ test.describe("Teacher: Attendance Management", () => {
 
     const classesRes = await request.get("/api/classes");
     const classesJson = await classesRes.json();
-    const classId = classesJson.data[0].id;
+    const classId = classesJson.data[classesJson.data.length - 1].id;
 
-    const res = await request.post("/api/attendance/sessions", {
-      data: {
-        classId,
-        date: new Date().toISOString(),
-      },
-    });
-    expect(res.ok()).toBeTruthy();
-    const json = await res.json();
-    expect(json.success).toBeTruthy();
-    expect(json.data._id || json.data.id).toBeTruthy();
+    const sessionId = await ensureTeacherSession(request, classId);
+    expect(sessionId).toBeTruthy();
   });
 
   test("can mark attendance for students via API", async ({ request }) => {
@@ -36,11 +28,8 @@ test.describe("Teacher: Attendance Management", () => {
     const classesJson = await classesRes.json();
     const classId = classesJson.data[0].id;
 
-    const sessionRes = await request.post("/api/attendance/sessions", {
-      data: { classId, date: new Date().toISOString() },
-    });
-    const sessionJson = await sessionRes.json();
-    const sessionId = sessionJson.data._id || sessionJson.data.id;
+    const sessionId = await ensureTeacherSession(request, classId);
+    expect(sessionId).toBeTruthy();
 
     const studentsRes = await request.get(`/api/students?classId=${classId}`);
     const studentsJson = await studentsRes.json();
@@ -67,7 +56,6 @@ test.describe("Teacher: Attendance Management", () => {
     await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 
     await page.goto("/attendance");
-    await page.waitForTimeout(2000);
-    await expect(page.locator("text=Attendance")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Attendance" })).toBeVisible({ timeout: 15000 });
   });
 });

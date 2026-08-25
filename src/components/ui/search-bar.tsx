@@ -22,7 +22,9 @@ export function SearchBar({
   const [localValue, setLocalValue] = useState(value);
 
   useEffect(() => {
-    setLocalValue(value);
+    void Promise.resolve().then(() => {
+      setLocalValue((prev) => (prev === value ? prev : value));
+    });
   }, [value]);
 
   useEffect(() => {

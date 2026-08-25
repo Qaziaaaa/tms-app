@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
-import { Student } from "@/models";
+import { Class, Student } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 
 export async function getStudents(classId: string | null, page: number, pageSize: number) {
@@ -41,20 +43,80 @@ export async function updateStudent(id: string, data: { rollNumber?: string; nam
 
 export async function deleteStudent(id: string) {
   await connectDB();
-  const student = await Student.findOneAndDelete({ _id: id });
-  if (!student) throw new ApiError(404, "Student not found");
+  const { AttendanceRecord, AssignmentSubmission, User } = await import("@/models");
+  await mongoose.connection.transaction(async (session) => {
+    const student = await Student.findOneAndDelete({ _id: id }, { session });
+    if (!student) throw new ApiError(404, "Student not found");
+
+    await AttendanceRecord.deleteMany({ studentId: id }, { session });
+    await AssignmentSubmission.deleteMany({ studentId: id }, { session });
+
+    if (student.userId) {
+      const linkedUser = await User.findOne({ _id: student.userId }).session(session).lean();
+      if (linkedUser?.role === "student") {
+        await User.findOneAndDelete({ _id: student.userId }, { session });
+      }
+    }
+  });
 }
+
+const BULK_IMPORT_MAX_ROWS = 1000;
+export const INITIAL_STUDENT_PASSWORD = "Student@123";
 
 export async function bulkImportStudents(classId: string, students: { rollNumber: string; name: string }[]) {
   await connectDB();
+  if (students.length > BULK_IMPORT_MAX_ROWS) {
+    throw new ApiError(400, `Bulk import is limited to ${BULK_IMPORT_MAX_ROWS} rows per request`);
+  }
+
+  const cls = await Class.findOne({ _id: classId }).lean();
+  if (!cls) throw new ApiError(404, "Class not found");
+
+  const { User } = await import("@/models");
+  const passwordHash = await bcrypt.hash(INITIAL_STUDENT_PASSWORD, 10);
+
   let created = 0;
+  let skipped = 0;
+  const skippedDetails: string[] = [];
+
   for (const s of students) {
     try {
-      await Student.create({ rollNumber: s.rollNumber, name: s.name, classId });
+      const existingUser = await User.findOne({ email: `${s.rollNumber.toLowerCase()}@student.tms.local` }).lean();
+
+      const user =
+        existingUser ??
+        (await User.create({
+          name: s.name,
+          email: `${s.rollNumber.toLowerCase()}@student.tms.local`,
+          passwordHash,
+          role: "student",
+        }));
+
+      await Student.create({
+        rollNumber: s.rollNumber,
+        name: s.name,
+        classId,
+        userId: String(user._id),
+        email: user.email,
+      });
       created++;
-    } catch {
-      // Skip duplicates
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? (error as { code: number }).code : null;
+      if (code === 11000) {
+        skipped++;
+        skippedDetails.push(s.rollNumber);
+      } else if (code === 96) {
+        throw new ApiError(400, "Import payload too large — split the CSV into smaller batches");
+      } else {
+        throw error;
+      }
     }
   }
-  return { created };
+
+  return {
+    created,
+    skipped,
+    skippedRollNumbers: skippedDetails.slice(0, 20),
+    initialPassword: INITIAL_STUDENT_PASSWORD,
+  };
 }

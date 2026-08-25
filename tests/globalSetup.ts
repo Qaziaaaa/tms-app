@@ -1,12 +1,10 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { getTestDbUri, assertTestDbUri } from "./lib/test-uri";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  throw new Error("MONGODB_URI must be set for test globalSetup");
-}
+const MONGODB_URI = getTestDbUri();
+assertTestDbUri(MONGODB_URI);
 
-const CLASS_COUNT = 3;
 const STUDENTS_PER_CLASS = 50;
 
 export default async function globalSetup() {
@@ -55,7 +53,7 @@ export default async function globalSetup() {
 
   const passwordHash = await bcrypt.hash("password123", 10);
 
-  const teacher = await User.create({
+  await User.create({
     name: "Test Teacher",
     email: "teacher@tms.edu",
     passwordHash,

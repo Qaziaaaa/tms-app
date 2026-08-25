@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
@@ -37,6 +37,19 @@ export default function ReportsPage() {
     );
   }, [reportData, search]);
 
+  const fetchReport = useCallback(async () => {
+    if (!selectedClassId) return;
+    setLoadingReport(true);
+    setReportData([]);
+    try {
+      const report = await getReport(selectedClassId, reportType);
+      setReportData(report.students || []);
+    } catch {
+      setReportData([]);
+    }
+    setLoadingReport(false);
+  }, [selectedClassId, reportType]);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") {
@@ -51,22 +64,9 @@ export default function ReportsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (selectedClassId) fetchReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClassId, reportType]);
-
-  async function fetchReport() {
     if (!selectedClassId) return;
-    setLoadingReport(true);
-    setReportData([]);
-    try {
-      const report = await getReport(selectedClassId, reportType);
-      setReportData(report.students || []);
-    } catch {
-      setReportData([]);
-    }
-    setLoadingReport(false);
-  }
+    void Promise.resolve().then(() => fetchReport());
+  }, [fetchReport, selectedClassId]);
 
   function getAttBadge(pct: number) {
     if (pct >= 80) return <Badge className="bg-green-600 hover:bg-green-700">{pct}%</Badge>;

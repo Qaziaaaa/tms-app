@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Class, Student } from "@/models";
 import { ApiError } from "@/lib/api-utils";
@@ -49,16 +50,21 @@ export async function updateClass(id: string, data: {
 
 export async function deleteClass(id: string) {
   await connectDB();
-  const cls = await Class.findOneAndDelete({ _id: id });
-  if (!cls) throw new ApiError(404, "Class not found");
   const { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } = await import("@/models");
-  const sessions = await AttendanceSession.find({ classId: id }).select("_id").lean();
-  const sessionIds = sessions.map((s) => s._id);
-  await AttendanceRecord.deleteMany({ sessionId: { $in: sessionIds } });
-  await AttendanceSession.deleteMany({ classId: id });
-  const assignments = await Assignment.find({ classId: id }).select("_id").lean();
-  const assignmentIds = assignments.map((a) => a._id);
-  await AssignmentSubmission.deleteMany({ assignmentId: { $in: assignmentIds } });
-  await Assignment.deleteMany({ classId: id });
-  await Student.deleteMany({ classId: id });
+  await mongoose.connection.transaction(async (session) => {
+    const cls = await Class.findOneAndDelete({ _id: id }, { session });
+    if (!cls) throw new ApiError(404, "Class not found");
+
+    const sessions = await AttendanceSession.find({ classId: id }).select("_id").session(session).lean();
+    const sessionIds = sessions.map((s) => s._id);
+    await AttendanceRecord.deleteMany({ sessionId: { $in: sessionIds } }, { session });
+    await AttendanceSession.deleteMany({ classId: id }, { session });
+
+    const assignments = await Assignment.find({ classId: id }).select("_id").session(session).lean();
+    const assignmentIds = assignments.map((a) => a._id);
+    await AssignmentSubmission.deleteMany({ assignmentId: { $in: assignmentIds } }, { session });
+    await Assignment.deleteMany({ classId: id }, { session });
+
+    await Student.deleteMany({ classId: id }, { session });
+  });
 }

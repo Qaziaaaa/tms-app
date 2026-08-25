@@ -1,6 +1,5 @@
 import { connectDB } from "@/lib/db";
 import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
-import { ApiError } from "@/lib/api-utils";
 
 export async function getAttendanceReport(classId: string) {
   await connectDB();

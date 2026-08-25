@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Assignment, AssignmentSubmission, Student } from "@/models";
 import { ApiError } from "@/lib/api-utils";
@@ -90,9 +91,11 @@ export async function updateAssignment(id: string, data: {
 
 export async function deleteAssignment(id: string) {
   await connectDB();
-  const assignment = await Assignment.findOneAndDelete({ _id: id });
-  if (!assignment) throw new ApiError(404, "Assignment not found");
-  await AssignmentSubmission.deleteMany({ assignmentId: id });
+  await mongoose.connection.transaction(async (session) => {
+    const assignment = await Assignment.findOneAndDelete({ _id: id }, { session });
+    if (!assignment) throw new ApiError(404, "Assignment not found");
+    await AssignmentSubmission.deleteMany({ assignmentId: id }, { session });
+  });
 }
 
 export async function saveSubmissions(assignmentId: string, submissions: {

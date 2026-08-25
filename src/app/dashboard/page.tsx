@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,8 +12,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { SearchBar } from "@/components/ui/search-bar";
 import { MarkAttendanceDialog } from "@/components/attendance/mark-attendance-dialog";
 import {
-  Users, GraduationCap, ClipboardCheck, FileText, ArrowRight,
-  AlertCircle, Plus, CalendarCheck, CheckCircle2, XCircle,
+  GraduationCap, ClipboardCheck, ArrowRight,
+  AlertCircle, Plus, CalendarCheck,
   BookOpen, TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
@@ -42,7 +42,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") loadDashboard();
+    if (status === "authenticated") {
+      void Promise.resolve().then(() => loadDashboard());
+    }
   }, [status, router, loadDashboard]);
 
   const filteredAttendance = (data?.recentAttendance || []).filter((s) => {

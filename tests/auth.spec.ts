@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginTeacherBrowser, loginStudentBrowser, TEACHER, STUDENT } from "./fixtures";
+import { loginTeacherBrowser, loginStudentBrowser, TEACHER } from "./fixtures";
 
 test.describe("Authentication", () => {
   test("teacher can login and reach dashboard", async ({ page }) => {
@@ -25,8 +25,9 @@ test.describe("Authentication", () => {
 
   test("empty fields prevent submission", async ({ page }) => {
     await page.goto("/login");
-    const btn = page.getByRole("button", { name: "Sign In" });
-    await expect(btn).toBeDisabled();
+    await page.getByRole("button", { name: "Sign In" }).click();
+    await expect(page).toHaveURL(/\/login/);
+    await expect(page.locator("text=Email is required").first()).toBeVisible();
   });
 
   test("unauthenticated user redirected to login", async ({ page }) => {
@@ -37,7 +38,6 @@ test.describe("Authentication", () => {
   test("student cannot access teacher routes", async ({ page }) => {
     await loginStudentBrowser(page);
     await page.goto("/dashboard");
-    await page.waitForTimeout(2000);
-    await expect(page).not.toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/student\/dashboard/, { timeout: 10000 });
   });
 });

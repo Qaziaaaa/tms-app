@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { AttendanceSession, AttendanceRecord } from "@/models";
 import { ApiError } from "@/lib/api-utils";
@@ -39,20 +40,26 @@ export async function getSessionById(id: string) {
   return { ...session, records };
 }
 
-export async function createSession(classId: string, date: Date) {
+export async function createSession(classId: string, dateKey: string) {
   await connectDB();
-  const existing = await AttendanceSession.findOne({ classId, date });
-  if (existing) {
-    throw new ApiError(409, "Attendance session already exists for this class and date");
+  const date = new Date(`${dateKey}T12:00:00Z`);
+  try {
+    return await AttendanceSession.create({ classId, dateKey, date });
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: number }).code === 11000) {
+      throw new ApiError(409, "Attendance session already exists for this class and date");
+    }
+    throw error;
   }
-  return AttendanceSession.create({ classId, date });
 }
 
 export async function deleteSession(id: string) {
   await connectDB();
-  const session = await AttendanceSession.findOneAndDelete({ _id: id });
-  if (!session) throw new ApiError(404, "Session not found");
-  await AttendanceRecord.deleteMany({ sessionId: id });
+  await mongoose.connection.transaction(async (session) => {
+    const deleted = await AttendanceSession.findOneAndDelete({ _id: id }, { session });
+    if (!deleted) throw new ApiError(404, "Session not found");
+    await AttendanceRecord.deleteMany({ sessionId: id }, { session });
+  });
 }
 
 export async function saveAttendance(sessionId: string, records: { studentId: string; status: "PRESENT" | "ABSENT" }[]) {

@@ -35,10 +35,13 @@ export interface StudentListDTO {
 export interface BulkImportResultDTO {
   created: number;
   skipped: number;
+  skippedRollNumbers?: string[];
+  initialPassword?: string;
 }
 
 export interface AttendanceSessionDTO {
   id: string;
+  dateKey: string;
   date: string;
   recordCount?: number;
 }
@@ -202,7 +205,7 @@ export type SaveSubmissionsPayload = SaveSubmissionsInput;
 
 export interface CreateSessionPayload {
   classId: string;
-  date: string;
+  dateKey: string;
 }
 
 export interface SaveAttendancePayload {

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginTeacherAPI, loginStudentAPI } from "./fixtures";
+import { loginTeacherAPI, loginStudentAPI, ensureTeacherSession } from "./fixtures";
 
 test.describe("Integration: Teacher -> Student Data Flow", () => {
   test("full flow: teacher creates class, adds students, marks attendance, assigns work; student sees it all", async ({ request }) => {
@@ -21,26 +21,21 @@ test.describe("Integration: Teacher -> Student Data Flow", () => {
     // Step 2: Bulk add 50 students
     const bulkRes = await request.post("/api/students/bulk", {
       data: {
-        className: "Integration Test Class",
+        classId,
         students: Array.from({ length: 50 }, (_, i) => ({
           name: `Integration Student ${i + 1}`,
           rollNumber: `INT-26-${String(i + 1).padStart(3, "0")}`,
-          email: `integration${i + 1}@student.edu`,
         })),
       },
     });
     expect(bulkRes.ok()).toBeTruthy();
 
     // Step 3: Create attendance session
-    const sessionRes = await request.post("/api/attendance/sessions", {
-      data: { classId, date: new Date().toISOString() },
-    });
-    expect(sessionRes.ok()).toBeTruthy();
-    const sessionJson = await sessionRes.json();
-    const sessionId = sessionJson.data._id || sessionJson.data.id;
+    const sessionId = await ensureTeacherSession(request, classId);
+    expect(sessionId).toBeTruthy();
 
     // Step 4: Get students and mark attendance
-    const studentsRes = await request.get(`/api/students?classId=${classId}`);
+    const studentsRes = await request.get(`/api/students?classId=${classId}&pageSize=200`);
     const studentsJson = await studentsRes.json();
     const students = studentsJson.data?.students || studentsJson.data || [];
     expect(students.length).toBeGreaterThanOrEqual(50);
@@ -72,9 +67,13 @@ test.describe("Integration: Teacher -> Student Data Flow", () => {
     // Step 6: Submit assignment for first student
     const submitRes = await request.post(`/api/assignments/${assignmentId}/submissions`, {
       data: {
-        studentId: students[0].id,
-        marks: 92,
-        status: "SUBMITTED",
+        submissions: [
+          {
+            studentId: students[0].id,
+            marks: 92,
+            status: "SUBMITTED",
+          },
+        ],
       },
     });
     expect(submitRes.ok()).toBeTruthy();
@@ -113,18 +112,17 @@ test.describe("Integration: Teacher -> Student Data Flow", () => {
 
     const classesRes = await request.get("/api/classes");
     const classesJson = await classesRes.json();
-    const classId = classesJson.data[0].id;
-
-    const sessionRes = await request.post("/api/attendance/sessions", {
-      data: { classId, date: new Date().toISOString() },
-    });
-    const sessionJson = await sessionRes.json();
-    const sessionId = sessionJson.data._id || sessionJson.data.id;
+    const seClass = classesJson.data.find((c: { name: string }) => c.name === "Software Engineering");
+    expect(seClass).toBeTruthy();
+    const classId = seClass.id;
 
     const studentsRes = await request.get(`/api/students?classId=${classId}`);
     const studentsJson = await studentsRes.json();
     const students = studentsJson.data?.students || studentsJson.data || [];
-    const targetStudent = students[0];
+    const targetStudent = students.find((s: { email: string }) => s.email === "ahmed.khan1@student.edu") || students[0];
+
+    const sessionId = await ensureTeacherSession(request, classId);
+    expect(sessionId).toBeTruthy();
 
     const markRes = await request.post("/api/attendance/records", {
       data: {
@@ -151,7 +149,10 @@ test.describe("Integration: Teacher -> Student Data Flow", () => {
 
   test("reports API returns data", async ({ request }) => {
     await loginTeacherAPI(request);
-    const res = await request.get("/api/reports");
+    const classesRes = await request.get("/api/classes");
+    const classesJson = await classesRes.json();
+    const classId = classesJson.data[0].id;
+    const res = await request.get(`/api/reports?classId=${classId}&type=attendance`);
     expect(res.ok()).toBeTruthy();
     const json = await res.json();
     expect(json.success).toBeTruthy();

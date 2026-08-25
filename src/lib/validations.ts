@@ -25,7 +25,7 @@ export const bulkStudentSchema = z.object({
 
 export const createAttendanceSessionSchema = z.object({
   classId: z.string().min(1),
-  date: z.string().min(1),
+  dateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "dateKey must be YYYY-MM-DD"),
 });
 
 export const attendanceRecordSchema = z.object({

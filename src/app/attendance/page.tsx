@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
+import { localDateKey } from "@/lib/utils";
 import { Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -68,26 +69,36 @@ function AttendanceContent() {
   }, [status, router, preselectedClass]);
 
   useEffect(() => {
-    if (selectedClassId) {
+    if (!selectedClassId) return;
+    let cancelled = false;
+    void (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
       setLoadingSessions(true);
       setActiveSession(null);
       setRecords([]);
-      Promise.all([
-        getSessions(selectedClassId),
-        getStudents(selectedClassId, { pageSize: 200 }),
-      ]).then(([sessionList, studentList]) => {
+      try {
+        const [sessionList, studentList] = await Promise.all([
+          getSessions(selectedClassId),
+          getStudents(selectedClassId, { pageSize: 200 }),
+        ]);
+        if (cancelled) return;
         setSessions(sessionList || []);
         setStudents(studentList.students || []);
         setLoadingSessions(false);
-      }).catch(() => setLoadingSessions(false));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      } catch {
+        if (!cancelled) setLoadingSessions(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedClassId]);
 
   async function createSession() {
     if (!selectedClassId) return;
     try {
-      const s = await createSessionApi({ classId: selectedClassId, date: new Date().toISOString() });
+      const s = await createSessionApi({ classId: selectedClassId, dateKey: localDateKey() });
       toast.success("Session created");
       selectSession(s);
       fetchSessions();

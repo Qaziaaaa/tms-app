@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { User, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
+import { User, Student, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 
