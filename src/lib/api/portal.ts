@@ -30,3 +30,7 @@ export function getStudentAssignments(): Promise<PortalAssignmentsDTO> {
 export function changePassword(data: ChangePasswordPayload): Promise<{ updated: boolean }> {
   return apiPut<{ updated: boolean }>("/student/password", data);
 }
+
+export function changeTeacherPassword(data: ChangePasswordPayload): Promise<{ updated: boolean }> {
+  return apiPut<{ updated: boolean }>("/teacher/password", data);
+}

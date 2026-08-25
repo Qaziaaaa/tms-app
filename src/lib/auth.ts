@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import { User } from "@/models";
+import { recordFailure, resetAttempts } from "@/lib/rate-limit";
 
 declare module "next-auth" {
   interface Session {
@@ -33,20 +34,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        const ip = req?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim()
+          || req?.headers?.get("x-real-ip")
+          || "127.0.0.1";
+        const rlKey = `login:${ip}`;
 
         await connectDB();
         const user = await User.findOne({ email: credentials.email as string }).lean();
 
-        if (!user) return null;
+        if (!user) {
+          recordFailure(rlKey);
+          return null;
+        }
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
         );
 
-        if (!isValid) return null;
+        if (!isValid) {
+          recordFailure(rlKey);
+          return null;
+        }
+
+        resetAttempts(rlKey);
 
         return {
           id: String(user._id),

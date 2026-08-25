@@ -15,6 +15,7 @@ import {
   BarChart3,
   GraduationCap,
   Brain,
+  Settings,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Assignments", href: "/assignments", icon: FileText },
   { label: "AI Insights", href: "/insights", icon: Brain },
   { label: "Reports", href: "/reports", icon: BarChart3 },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 interface SidebarProps {
