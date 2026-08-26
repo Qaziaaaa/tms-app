@@ -128,6 +128,7 @@ function AttendanceContent() {
 
   function markAll(status: "PRESENT" | "ABSENT") {
     setRecords(students.map(s => ({ studentId: s.id, status })));
+    setStatusFilter("ALL");
   }
 
   function toggleStatus(studentId: string, status: "PRESENT" | "ABSENT") {
@@ -152,13 +153,17 @@ function AttendanceContent() {
 
   async function deleteSession() {
     if (!deleteId) return;
-    const deleted = await deleteSessionApi(deleteId).catch(() => null);
-    if (deleted) {
+    const id = deleteId;
+    setDeleteId(null);
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    if (activeSession?.id === id) { setActiveSession(null); setRecords([]); }
+    try {
+      await deleteSessionApi(id);
       toast.success("Session deleted");
-      if (activeSession?.id === deleteId) { setActiveSession(null); setRecords([]); }
+    } catch {
+      toast.error("Failed to delete session");
       fetchSessions().catch(() => undefined);
     }
-    setDeleteId(null);
   }
 
   function getStatusFor(studentId: string): string {
@@ -184,7 +189,7 @@ function AttendanceContent() {
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm sm:w-auto sm:max-w-[200px]"
             >
               {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
             </select>
@@ -235,36 +240,33 @@ function AttendanceContent() {
                       ? new Date(activeSession.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
                       : "Select a session"}
                   </CardTitle>
-                  {activeSession && (
-                    <div className="flex items-center gap-2">
-                      <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
-                        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" /> {presentCount}P</span>
-                        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" /> {absentCount}A</span>
-                        <span>{markedCount}/{students.length} marked</span>
-                      </div>
-                      <div className="h-4 w-px bg-border" />
-                      <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")}>
-                        <CheckCircle2 className="mr-1 h-3 w-3" /> All Present
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")}>
-                        <XCircle className="mr-1 h-3 w-3" /> All Absent
-                      </Button>
-                      <Button size="sm" onClick={saveAttendance} disabled={saving || markedCount === 0}>
-                        {saving ? "Saving..." : "Save Attendance"}
-                      </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className={`hidden items-center gap-3 text-xs text-muted-foreground sm:flex ${!activeSession ? "invisible" : ""}`}>
+                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" /> {presentCount}P</span>
+                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" /> {absentCount}A</span>
+                      <span>{markedCount}/{students.length} marked</span>
                     </div>
-                  )}
-                </div>
-                {activeSession && students.length > 0 && (
-                  <div className="mt-1">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${(markedCount / students.length) * 100}%` }}
-                      />
-                    </div>
+                    <div className={`hidden h-4 w-px bg-border sm:block ${!activeSession ? "invisible" : ""}`} />
+                    <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")} disabled={!activeSession}>
+                      <CheckCircle2 className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">All Present</span>
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")} disabled={!activeSession}>
+                      <XCircle className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">All Absent</span>
+                    </Button>
+                    <Button size="sm" onClick={saveAttendance} disabled={!activeSession || saving || markedCount === 0}>
+                      {saving ? "Saving..." : <span className="sm:hidden">Save</span>}
+                      {!saving && <span className="hidden sm:inline">Save Attendance</span>}
+                    </Button>
                   </div>
-                )}
+                </div>
+                <div className="mt-1">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: activeSession ? `${(markedCount / students.length) * 100}%` : "0%" }}
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {!activeSession ? (
@@ -279,7 +281,7 @@ function AttendanceContent() {
                         onChange={setStudentSearch}
                         placeholder="Search students..."
                         delay={200}
-                        className="sm:max-w-xs"
+                        className="w-full sm:max-w-xs"
                       />
                       <div className="flex gap-1">
                         {(["ALL", "UNMARKED", "PRESENT", "ABSENT"] as const).map((f) => (
@@ -326,20 +328,18 @@ function AttendanceContent() {
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-1">
                                   <Button
-                                    size="sm"
                                     variant={st === "PRESENT" ? "default" : "outline"}
-                                    className={st === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""}
+                                    className={`h-9 min-w-[40px] px-2 ${st === "PRESENT" ? "bg-green-600 hover:bg-green-700" : ""}`}
                                     onClick={() => toggleStatus(s.id, "PRESENT")}
                                   >
-                                    <CheckCircle2 className="mr-1 h-3 w-3" /> P
+                                    <CheckCircle2 className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">P</span>
                                   </Button>
                                    <Button
-                                    size="sm"
                                     variant={st === "ABSENT" ? "default" : "outline"}
-                                    className={st === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}
+                                    className={`h-9 min-w-[40px] px-2 ${st === "ABSENT" ? "bg-red-600 hover:bg-red-700" : ""}`}
                                     onClick={() => toggleStatus(s.id, "ABSENT")}
                                   >
-                                    <XCircle className="mr-1 h-3 w-3" /> A
+                                    <XCircle className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">A</span>
                                   </Button>
                                 </div>
                               </TableCell>

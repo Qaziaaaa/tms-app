@@ -79,7 +79,8 @@ export function Sidebar({ isOpen, onClose, user }: SidebarProps) {
             onClick={() => setCollapsed((c) => !c)}
             className={cn(
               "rounded-full p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              collapsed ? "ml-auto absolute top-4 right-2" : "ml-auto"
+              collapsed ? "ml-auto absolute top-4 right-2" : "ml-auto",
+              "max-lg:hidden"
             )}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

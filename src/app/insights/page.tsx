@@ -40,7 +40,6 @@ export default function InsightsPage() {
   const fetchInsights = useCallback(async () => {
     if (!selectedClassId) return;
     setLoadingInsights(true);
-    setInsights(null);
     try {
       setInsights(await getInsights(selectedClassId));
     } catch (err) {

@@ -172,7 +172,7 @@ export default function StudentsPage() {
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm sm:w-auto sm:max-w-[200px]"
             >
               {classes.map(c => (
                 <option key={c.id} value={c.id}>{c.name} — {c.department} ({c.batch})</option>
@@ -184,6 +184,7 @@ export default function StudentsPage() {
             onChange={setSearch}
             placeholder="Search by name or roll number..."
             delay={200}
+            className="w-full sm:max-w-xs"
           />
           <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
         </div>

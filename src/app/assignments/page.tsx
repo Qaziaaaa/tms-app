@@ -179,7 +179,7 @@ export default function AssignmentsPage() {
 
         <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
           {loading ? <Skeleton className="h-10 w-64" /> : (
-            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="h-10 rounded-lg border border-input bg-background px-3 text-sm">
+            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm sm:w-auto sm:max-w-[200px]">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
@@ -188,6 +188,7 @@ export default function AssignmentsPage() {
             onChange={setSearch}
             placeholder="Search assignments..."
             delay={200}
+            className="w-full sm:max-w-xs"
           />
           <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
         </div>
