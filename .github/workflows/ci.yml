@@ -78,3 +78,4 @@ jobs:
         env:
           MONGODB_URI: mongodb://localhost:27017/?replicaSet=rs0
           AUTH_SECRET: ci-e2e-secret
+
