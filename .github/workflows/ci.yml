@@ -42,7 +42,13 @@ jobs:
         image: mongo:7
         ports:
           - 27017:27017
-        command: mongod --replSet rs0 --bind_ip_all
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1}).ok' --quiet || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+        command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     steps:
       - uses: actions/checkout@v4
 
@@ -54,16 +60,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Init replica set (required for transactions)
+      - name: Init replica set
         run: |
           for i in $(seq 1 30); do
-            if mongosh --host localhost --port 27017 --quiet --eval "try { rs.status().ok } catch (e) { rs.initiate().ok }" 2>/dev/null | grep -q 1; then
+            if docker exec $(docker ps --filter "ancestor=mongo:7" -q) mongosh --quiet --eval "try { rs.status().ok } catch(e) { rs.initiate().ok }" 2>/dev/null | grep -q 1; then
               echo "Replica set ready"
-              break
+              exit 0
             fi
-            echo "Waiting for MongoDB... ($i/30)"
+            echo "Waiting for MongoDB replica set... ($i/30)"
             sleep 2
           done
+          echo "Failed to init replica set"
+          exit 1
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
