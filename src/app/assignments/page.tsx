@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +16,6 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getClasses,
   getAssignments,
   getAssignmentById,
   createAssignment,
@@ -26,20 +23,16 @@ import {
   deleteAssignment as deleteAssignmentApi,
   saveSubmissions as saveSubmissionsApi,
 } from "@/lib/api";
+import { useAuthAndClasses } from "@/hooks/use-auth-and-classes";
 import { getErrorMessage } from "@/hooks/use-api-data";
 import type {
-  ClassDTO,
   AssignmentDTO,
   SubmissionDTO,
 } from "@/types/api";
 
 export default function AssignmentsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [classes, setClasses] = useState<ClassDTO[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
+  const { session, status, classes, selectedClassId, setSelectedClassId, loading } = useAuthAndClasses();
   const [assignments, setAssignments] = useState<AssignmentDTO[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -63,19 +56,6 @@ export default function AssignmentsPage() {
     const q = search.trim().toLowerCase();
     return assignments.filter((a) => a.title.toLowerCase().includes(q));
   }, [assignments, search]);
-
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") {
-      getClasses()
-        .then((data) => {
-          setClasses(data);
-          if (data.length > 0) setSelectedClassId(data[0].id);
-        })
-        .catch(() => setClasses([]))
-        .finally(() => setLoading(false));
-    }
-  }, [status, router]);
 
   useEffect(() => {
     if (selectedClassId) fetchAssignments();
@@ -133,13 +113,14 @@ export default function AssignmentsPage() {
     if (!id) return;
     deleteIdRef.current = null;
     setDeleteId(null);
+    setAssignments((prev) => prev.filter((a) => a.id !== id));
+    if (activeAssignment?.id === id) { setActiveAssignment(null); setSubmissions([]); }
     try {
       await deleteAssignmentApi(id);
       toast.success("Assignment deleted");
-      if (activeAssignment?.id === id) { setActiveAssignment(null); setSubmissions([]); }
-      fetchAssignments();
     } catch (err) {
       toast.error(getErrorMessage(err));
+      fetchAssignments();
     }
   }
 
@@ -154,7 +135,14 @@ export default function AssignmentsPage() {
   }
 
   function updateSubmission(studentId: string, field: string, value: string | number | null) {
-    setSubmissions(prev => prev.map(s => s.studentId === studentId ? { ...s, [field]: value } : s));
+    setSubmissions(prev => prev.map(s => {
+      if (s.studentId !== studentId) return s;
+      if (field === "marks" && activeAssignment) {
+        const num = value === null ? null : Math.max(0, Math.min(Number(value), activeAssignment.totalMarks));
+        return { ...s, marks: num };
+      }
+      return { ...s, [field]: value };
+    }));
   }
 
   async function saveSubmissions() {

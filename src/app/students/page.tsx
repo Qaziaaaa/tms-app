@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,23 +16,19 @@ import { SearchBar } from "@/components/ui/search-bar";
 import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getClasses,
   getStudents,
   createStudent,
   updateStudent,
   deleteStudent,
   importStudents,
 } from "@/lib/api";
+import { useAuthAndClasses } from "@/hooks/use-auth-and-classes";
 import { getErrorMessage } from "@/hooks/use-api-data";
-import type { ClassDTO, StudentDTO } from "@/types/api";
+import type { StudentDTO } from "@/types/api";
 
 export default function StudentsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [classes, setClasses] = useState<ClassDTO[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState("");
+  const { session, status, classes, selectedClassId, setSelectedClassId, loading } = useAuthAndClasses();
   const [students, setStudents] = useState<StudentDTO[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,19 +50,6 @@ export default function StudentsPage() {
       (s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
     );
   }, [students, search]);
-
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") {
-      getClasses()
-        .then((data) => {
-          setClasses(data);
-          if (data.length > 0) setSelectedClassId(data[0].id);
-        })
-        .catch(() => setClasses([]))
-        .finally(() => setLoading(false));
-    }
-  }, [status, router]);
 
   useEffect(() => {
     if (selectedClassId) fetchStudents();
@@ -118,14 +99,32 @@ export default function StudentsPage() {
 
   async function handleDelete() {
     if (!deleteId) return;
+    const student = students.find((s) => s.id === deleteId);
+    setDeleteId(null);
+    setStudents((prev) => prev.filter((s) => s.id !== deleteId));
     try {
       await deleteStudent(deleteId);
-      toast.success("Student removed");
-      fetchStudents();
+      toast.success("Student removed", {
+        description: student ? `${student.name} (${student.rollNumber})` : undefined,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            if (student) {
+              try {
+                await createStudent({ rollNumber: student.rollNumber, name: student.name, classId: selectedClassId });
+                toast.success("Student restored");
+                fetchStudents();
+              } catch {
+                toast.error("Could not restore student");
+              }
+            }
+          },
+        },
+      });
     } catch (err) {
       toast.error(getErrorMessage(err));
+      fetchStudents();
     }
-    setDeleteId(null);
   }
 
   async function handleBulkImport() {

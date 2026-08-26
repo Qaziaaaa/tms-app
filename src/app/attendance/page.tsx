@@ -1,8 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ import { localDateKey } from "@/lib/utils";
 import { Plus, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getClasses,
   getStudents,
   getSessions,
   getSessionById,
@@ -23,50 +21,51 @@ import {
   deleteSession as deleteSessionApi,
   saveAttendanceRecords,
 } from "@/lib/api";
+import { useAuthAndClasses } from "@/hooks/use-auth-and-classes";
 import { getErrorMessage } from "@/hooks/use-api-data";
-import type { ClassDTO, StudentDTO, AttendanceSessionDTO } from "@/types/api";
+import type { StudentDTO, AttendanceSessionDTO } from "@/types/api";
 
 interface RecordItem { studentId: string; status: "PRESENT" | "ABSENT"; }
 
 function AttendanceContent() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedClass = searchParams.get("classId") || "";
+  const { session, status, classes, selectedClassId, setSelectedClassId, loading } = useAuthAndClasses(preselectedClass);
 
-  const [classes, setClasses] = useState<ClassDTO[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState(preselectedClass);
   const [sessions, setSessions] = useState<AttendanceSessionDTO[]>([]);
   const [students, setStudents] = useState<StudentDTO[]>([]);
   const [activeSession, setActiveSession] = useState<AttendanceSessionDTO | null>(null);
   const [records, setRecords] = useState<RecordItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [studentSearch, setStudentSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "UNMARKED" | "PRESENT" | "ABSENT">("ALL");
+
+  const markedCount = useMemo(() => {
+    return students.filter((s) => records.some((r) => r.studentId === s.id)).length;
+  }, [students, records]);
+
+  const presentCount = useMemo(() => records.filter((r) => r.status === "PRESENT").length, [records]);
+  const absentCount = useMemo(() => records.filter((r) => r.status === "ABSENT").length, [records]);
 
   const filteredStudents = useMemo(() => {
-    if (!studentSearch.trim()) return students;
-    const q = studentSearch.trim().toLowerCase();
-    return students.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
-    );
-  }, [students, studentSearch]);
-
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") {
-      getClasses()
-        .then((data) => {
-          setClasses(data);
-          if (preselectedClass) setSelectedClassId(preselectedClass);
-          else if (data.length > 0) setSelectedClassId(data[0].id);
-        })
-        .catch(() => setClasses([]))
-        .finally(() => setLoading(false));
+    let result = students;
+    if (studentSearch.trim()) {
+      const q = studentSearch.trim().toLowerCase();
+      result = result.filter(
+        (s) => s.name.toLowerCase().includes(q) || s.rollNumber.toLowerCase().includes(q)
+      );
     }
-  }, [status, router, preselectedClass]);
+    if (statusFilter !== "ALL") {
+      result = result.filter((s) => {
+        const st = records.find((r) => r.studentId === s.id)?.status;
+        if (statusFilter === "UNMARKED") return !st;
+        return st === statusFilter;
+      });
+    }
+    return result;
+  }, [students, studentSearch, records, statusFilter]);
 
   useEffect(() => {
     if (!selectedClassId) return;
@@ -237,14 +236,35 @@ function AttendanceContent() {
                       : "Select a session"}
                   </CardTitle>
                   {activeSession && (
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")}>All Present</Button>
-                      <Button size="sm" onClick={saveAttendance} disabled={saving}>
+                    <div className="flex items-center gap-2">
+                      <div className="hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
+                        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" /> {presentCount}P</span>
+                        <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" /> {absentCount}A</span>
+                        <span>{markedCount}/{students.length} marked</span>
+                      </div>
+                      <div className="h-4 w-px bg-border" />
+                      <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")}>
+                        <CheckCircle2 className="mr-1 h-3 w-3" /> All Present
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")}>
+                        <XCircle className="mr-1 h-3 w-3" /> All Absent
+                      </Button>
+                      <Button size="sm" onClick={saveAttendance} disabled={saving || markedCount === 0}>
                         {saving ? "Saving..." : "Save Attendance"}
                       </Button>
                     </div>
                   )}
                 </div>
+                {activeSession && students.length > 0 && (
+                  <div className="mt-1">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${(markedCount / students.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {!activeSession ? (
@@ -253,13 +273,30 @@ function AttendanceContent() {
                   <p className="py-12 text-center text-muted-foreground">No students in this class.</p>
                 ) : (
                   <>
-                    <div className="mb-4">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                       <SearchBar
                         value={studentSearch}
                         onChange={setStudentSearch}
                         placeholder="Search students..."
                         delay={200}
+                        className="sm:max-w-xs"
                       />
+                      <div className="flex gap-1">
+                        {(["ALL", "UNMARKED", "PRESENT", "ABSENT"] as const).map((f) => (
+                          <Button
+                            key={f}
+                            size="sm"
+                            variant={statusFilter === f ? "default" : "outline"}
+                            className={`h-7 text-xs ${statusFilter === f ? "" : "text-muted-foreground"}`}
+                            onClick={() => setStatusFilter(f)}
+                          >
+                            {f === "ALL" ? "All" : f === "UNMARKED" ? "Unmarked" : f === "PRESENT" ? "Present" : "Absent"}
+                          </Button>
+                        ))}
+                      </div>
+                      <span className="ml-auto text-xs text-muted-foreground sm:hidden">
+                        {presentCount}P &middot; {absentCount}A &middot; {markedCount}/{students.length}
+                      </span>
                     </div>
                     <div className="max-h-[400px] overflow-auto">
                       <Table>
@@ -274,13 +311,16 @@ function AttendanceContent() {
                           {filteredStudents.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={3} className="py-8 text-center text-sm text-muted-foreground">
-                                No students match your search.
+                                {students.length === 0 ? "No students in this class." : "No students match your filter."}
                               </TableCell>
                             </TableRow>
                           ) : filteredStudents.map(s => {
                           const st = getStatusFor(s.id);
                           return (
-                            <TableRow key={s.id}>
+                            <TableRow
+                              key={s.id}
+                              className={!st ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}
+                            >
                               <TableCell><Badge variant="outline">{s.rollNumber}</Badge></TableCell>
                               <TableCell className="font-medium">{s.name}</TableCell>
                               <TableCell className="text-right">
