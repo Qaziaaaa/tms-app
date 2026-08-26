@@ -8,7 +8,7 @@ test.describe("Teacher: Class Management", () => {
 
   test("dashboard shows class cards", async ({ page }) => {
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(page.getByText("Total Students")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("Active Classes")).toBeVisible({ timeout: 15000 });
     const cards = page.locator("[class*='rounded-lg'][class*='border']");
     const count = await cards.count();
     expect(count).toBeGreaterThanOrEqual(1);

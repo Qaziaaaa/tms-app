@@ -108,6 +108,9 @@ export interface DashboardDataDTO {
   totalSessions: number;
   totalAssignments: number;
   todayAttendance: { present: number; absent: number };
+  todayMarkedClasses: number;
+  totalClassesCount: number;
+  pendingGrades: number;
   recentAttendance: RecentAttendanceItem[];
   recentStudents?: { id: string; name: string; email: string; classId?: { name: string } }[];
   classesWithStats: ClassStatsItem[];

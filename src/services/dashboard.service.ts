@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { Class, Student, AttendanceSession, AttendanceRecord, Assignment } from "@/models";
+import { Class, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
 import { RECENT_ITEMS_LIMIT } from "@/lib/constants";
 
 export async function getDashboard() {
@@ -85,6 +85,15 @@ export async function getDashboard() {
     .populate("classId", "name")
     .lean();
 
+  const totalClassesCount = await Class.countDocuments();
+  const todayClassIds = await AttendanceSession.distinct("classId", { date: { $gte: today } });
+  const todayMarkedClasses = todayClassIds.length;
+
+  const pendingGrades = await AssignmentSubmission.countDocuments({
+    status: { $in: ["SUBMITTED", "LATE"] },
+    marks: null,
+  });
+
   return {
     totalClasses,
     totalStudents,
@@ -94,6 +103,9 @@ export async function getDashboard() {
     recentAttendance,
     classesWithStats,
     todayAttendance: { present: todayPresent, absent: todayAbsent },
+    todayMarkedClasses,
+    totalClassesCount,
+    pendingGrades,
     recentStudents,
   };
 }

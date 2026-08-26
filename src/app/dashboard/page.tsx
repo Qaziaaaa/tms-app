@@ -14,7 +14,7 @@ import { MarkAttendanceDialog } from "@/components/attendance/mark-attendance-di
 import {
   GraduationCap, ClipboardCheck, ArrowRight,
   AlertCircle, Plus, CalendarCheck,
-  BookOpen, TrendingUp,
+  BookOpen, CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
 import { getDashboard } from "@/lib/api";
@@ -56,13 +56,8 @@ export default function DashboardPage() {
     return <div className="flex min-h-screen items-center justify-center"><Skeleton className="h-8 w-48" /></div>;
   }
 
-  const todayPct = data && data.totalStudents > 0
-    ? Math.round(((data.todayAttendance.present) / data.totalStudents) * 100)
-    : 0;
-
-  const avgAttendance = data?.classesWithStats?.length
-    ? Math.round(data.classesWithStats.reduce((sum, c) => sum + c.averageAttendance, 0) / data.classesWithStats.length)
-    : 0;
+  const allClassesMarked = data && data.totalClassesCount > 0 && data.todayMarkedClasses >= data.totalClassesCount;
+  const pendingGrades = data?.pendingGrades ?? 0;
 
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
@@ -117,38 +112,38 @@ export default function DashboardPage() {
                 : (
                   <>
                     <StatCard
-                      label="Total Students"
-                      value={data?.totalStudents ?? 0}
-                      subtitle={`${data?.totalClasses ?? 0} active classes`}
+                      label="Attendance Today"
+                      value={`${data?.todayMarkedClasses ?? 0}/${data?.totalClassesCount ?? 0}`}
+                      subtitle={allClassesMarked ? "All classes marked" : `${(data?.totalClassesCount ?? 0) - (data?.todayMarkedClasses ?? 0)} class(es) pending`}
+                      subtitleColor={allClassesMarked ? "hsl(var(--clr-green))" : "hsl(var(--clr-amber))"}
+                      icon={allClassesMarked ? CheckCircle2 : CalendarCheck}
+                      iconBg={allClassesMarked ? "hsl(var(--clr-green-bg))" : "hsl(var(--clr-amber-bg))"}
+                      iconColor={allClassesMarked ? "hsl(var(--clr-green))" : "hsl(var(--clr-amber))"}
+                    />
+                    <StatCard
+                      label="Pending Grades"
+                      value={pendingGrades}
+                      subtitle={pendingGrades > 0 ? "Submissions awaiting grading" : "All caught up"}
+                      subtitleColor={pendingGrades > 0 ? "hsl(var(--clr-amber))" : "hsl(var(--clr-green))"}
+                      icon={ClipboardCheck}
+                      iconBg={pendingGrades > 0 ? "hsl(var(--clr-amber-bg))" : "hsl(var(--clr-green-bg))"}
+                      iconColor={pendingGrades > 0 ? "hsl(var(--clr-amber))" : "hsl(var(--clr-green))"}
+                    />
+                    <StatCard
+                      label="Active Classes"
+                      value={data?.totalClasses ?? 0}
+                      subtitle={`${data?.totalStudents ?? 0} students enrolled`}
                       icon={GraduationCap}
                       iconBg="hsl(var(--clr-blue-bg))"
                       iconColor="hsl(var(--clr-blue))"
                     />
                     <StatCard
-                      label="Attendance Today"
-                      value={`${data?.todayAttendance.present ?? 0}/${data?.totalStudents ?? 0}`}
-                      subtitle={`${todayPct}% attendance rate`}
-                      subtitleColor={todayPct >= 75 ? "hsl(var(--clr-green))" : todayPct >= 50 ? "hsl(var(--clr-amber))" : "hsl(var(--clr-red))"}
-                      icon={CalendarCheck}
-                      iconBg="hsl(var(--clr-green-bg))"
-                      iconColor="hsl(var(--clr-green))"
-                    />
-                    <StatCard
-                      label="Avg Attendance"
-                      value={`${avgAttendance}%`}
-                      subtitle="Across all classes"
-                      subtitleColor={avgAttendance >= 75 ? "hsl(var(--clr-green))" : "hsl(var(--clr-amber))"}
-                      icon={TrendingUp}
-                      iconBg="hsl(var(--clr-purple-bg))"
-                      iconColor="hsl(var(--clr-purple))"
-                    />
-                    <StatCard
-                      label="Sessions Held"
+                      label="Total Sessions"
                       value={data?.totalSessions ?? 0}
                       subtitle={`${data?.totalAssignments ?? 0} assignments`}
-                      icon={ClipboardCheck}
-                      iconBg="hsl(var(--clr-amber-bg))"
-                      iconColor="hsl(var(--clr-amber))"
+                      icon={BookOpen}
+                      iconBg="hsl(var(--clr-purple-bg))"
+                      iconColor="hsl(var(--clr-purple))"
                     />
                   </>
                 )
