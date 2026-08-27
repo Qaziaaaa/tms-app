@@ -141,6 +141,9 @@ export default function AssignmentsPage() {
         const num = value === null ? null : Math.max(0, Math.min(Number(value), activeAssignment.totalMarks));
         return { ...s, marks: num };
       }
+      if (field === "status" && value === "NOT_SUBMITTED") {
+        return { ...s, status: value, marks: null };
+      }
       return { ...s, [field]: value };
     }));
   }
@@ -258,13 +261,19 @@ export default function AssignmentsPage() {
                       <TableBody>
                         {submissions.map(s => (
                           <TableRow key={s.studentId}>
-                            <TableCell><Badge variant="outline">{s.student.rollNumber}</Badge></TableCell>
+                              <TableCell><Badge variant="outline">{s.student.rollNumber}</Badge></TableCell>
                             <TableCell className="font-medium">{s.student.name}</TableCell>
                             <TableCell>
                               <select
                                 value={s.status}
                                 onChange={(e) => updateSubmission(s.studentId, "status", e.target.value)}
-                                className="rounded border border-input bg-background px-2 py-1 text-xs"
+                                className={`h-7 cursor-pointer rounded-full border px-2 text-xs font-semibold outline-none transition-colors ${
+                                  s.status === "SUBMITTED"
+                                    ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : s.status === "LATE"
+                                      ? "border-amber-300 bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                      : "border-border bg-muted text-muted-foreground"
+                                }`}
                               >
                                 <option value="NOT_SUBMITTED">Not Submitted</option>
                                 <option value="SUBMITTED">Submitted</option>
@@ -277,9 +286,11 @@ export default function AssignmentsPage() {
                                 value={s.marks ?? ""}
                                 onChange={(e) => updateSubmission(s.studentId, "marks", e.target.value ? parseInt(e.target.value) : null)}
                                 placeholder={`/${activeAssignment.totalMarks}`}
-                                className="h-8 text-xs"
+                                className={`h-8 text-xs ${s.status === "NOT_SUBMITTED" ? "opacity-40" : ""}`}
                                 min={0}
                                 max={activeAssignment.totalMarks}
+                                disabled={s.status === "NOT_SUBMITTED"}
+                                title={s.status === "NOT_SUBMITTED" ? "Marks are only available for Submitted or Late submissions" : undefined}
                               />
                             </TableCell>
                           </TableRow>
