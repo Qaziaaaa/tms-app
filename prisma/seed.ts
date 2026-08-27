@@ -63,34 +63,34 @@ async function main() {
     schedule: "Tuesday 2:00 PM",
   });
 
-  const irClass = await ClassModel.create({
-    name: "International Relations",
-    department: "Humanities",
-    batch: "2026",
+  const dsClass = await ClassModel.create({
+    name: "Data Structures",
+    department: "Computer Science",
+    batch: "2024",
     schedule: "Wednesday 9:00 AM",
   });
 
   const studentsData = [
     { classId: seClass._id, students: [
-      { rollNumber: "CS-24-001", name: "Ahmed Khan", email: "ahmed@student.edu" },
-      { rollNumber: "CS-24-002", name: "Fatima Ali", email: "fatima@student.edu" },
-      { rollNumber: "CS-24-003", name: "Hassan Ahmed", email: "hassan@student.edu" },
-      { rollNumber: "CS-24-004", name: "Sara Malik", email: "sara@student.edu" },
-      { rollNumber: "CS-24-005", name: "Usman Raza", email: "usman@student.edu" },
+      { rollNumber: "CS-2024-001", name: "Ahmed Khan", email: "ahmed.khan1@student.edu" },
+      { rollNumber: "CS-2024-002", name: "Fatima Ali", email: "fatima.ali2@student.edu" },
+      { rollNumber: "CS-2024-003", name: "Hassan Ahmed", email: "hassan.ahmed3@student.edu" },
+      { rollNumber: "CS-2024-004", name: "Sara Malik", email: "sara.malik4@student.edu" },
+      { rollNumber: "CS-2024-005", name: "Usman Raza", email: "usman.raza5@student.edu" },
     ]},
     { classId: aiClass._id, students: [
-      { rollNumber: "AI-25-001", name: "Ayesha Noor", email: "ayesha@student.edu" },
-      { rollNumber: "AI-25-002", name: "Bilal Shah", email: "bilal@student.edu" },
-      { rollNumber: "AI-25-003", name: "Cyra Ahmed", email: "cyra@student.edu" },
-      { rollNumber: "AI-25-004", name: "Danish Khan", email: "danish@student.edu" },
-      { rollNumber: "AI-25-005", name: "Emaan Tariq", email: "emaan@student.edu" },
+      { rollNumber: "AI-2025-001", name: "Ayesha Noor", email: "ayesha.noor1@student.edu" },
+      { rollNumber: "AI-2025-002", name: "Bilal Shah", email: "bilal.shah2@student.edu" },
+      { rollNumber: "AI-2025-003", name: "Cyra Ahmed", email: "cyra.ahmed3@student.edu" },
+      { rollNumber: "AI-2025-004", name: "Danish Khan", email: "danish.khan4@student.edu" },
+      { rollNumber: "AI-2025-005", name: "Emaan Tariq", email: "emaan.tariq5@student.edu" },
     ]},
-    { classId: irClass._id, students: [
-      { rollNumber: "IR-26-001", name: "Farhan Ali", email: "farhan@student.edu" },
-      { rollNumber: "IR-26-002", name: "Gulnaz Bibi", email: "gulnaz@student.edu" },
-      { rollNumber: "IR-26-003", name: "Hamza Tariq", email: "hamza@student.edu" },
-      { rollNumber: "IR-26-004", name: "Iqra Siddiqui", email: "iqra@student.edu" },
-      { rollNumber: "IR-26-005", name: "Junaid Ahmed", email: "junaid@student.edu" },
+    { classId: dsClass._id, students: [
+      { rollNumber: "DS-2024-001", name: "Farhan Ali", email: "farhan.ali1@student.edu" },
+      { rollNumber: "DS-2024-002", name: "Gulnaz Bibi", email: "gulnaz.bibi2@student.edu" },
+      { rollNumber: "DS-2024-003", name: "Hamza Tariq", email: "hamza.tariq3@student.edu" },
+      { rollNumber: "DS-2024-004", name: "Iqra Siddiqui", email: "iqra.siddiqui4@student.edu" },
+      { rollNumber: "DS-2024-005", name: "Junaid Ahmed", email: "junaid.ahmed5@student.edu" },
     ]},
   ];
 

@@ -5,7 +5,7 @@ import { getTestDbUri, assertTestDbUri } from "./lib/test-uri";
 const MONGODB_URI = getTestDbUri();
 assertTestDbUri(MONGODB_URI);
 
-const STUDENTS_PER_CLASS = 50;
+const STUDENTS_PER_CLASS = 5;
 
 export default async function globalSetup() {
   await mongoose.connect(MONGODB_URI);
