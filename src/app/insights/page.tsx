@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Brain, AlertTriangle, ShieldCheck, TrendingDown } from "lucide-react";
+import { Brain, AlertTriangle, ShieldCheck, TrendingDown, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { getClasses, getInsights } from "@/lib/api";
 import { getErrorMessage } from "@/hooks/use-api-data";
@@ -146,17 +146,39 @@ export default function InsightsPage() {
 
             <Card className="card-shadow">
               <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Brain className="h-5 w-5 text-purple-600" /> AI Analysis</CardTitle></CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {insights.students.length === 0
-                    ? "No student data available for analysis."
-                    : `Analyzing ${insights.totalStudents} students across ${insights.students[0]?.totalSessions || 0} sessions and ${insights.students[0]?.totalAssignments || 0} assignments. ${insights.atRiskStudents} student(s) flagged as at-risk.`}
-                </p>
-                {insights.cramStudents.length > 0 && (
-                  <div className="mt-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3">
-                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                      Likely Cram Students: {insights.cramStudents.map(s => s.name).join(", ")}
+              <CardContent className="space-y-4">
+                {insights.summary ? (
+                  <p className="text-sm leading-relaxed">{insights.summary}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {insights.students.length === 0
+                      ? "No student data available for analysis."
+                      : "AI summary unavailable."}
+                  </p>
+                )}
+
+                {insights.highPerformers.length > 0 && (
+                  <div className="rounded-lg bg-green-500/10 border border-green-500/20 p-3">
+                    <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-1.5 flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4" /> High Performers
                     </p>
+                    <p className="text-sm text-muted-foreground">
+                      {insights.highPerformers.map(s => s.name).join(", ")}
+                    </p>
+                  </div>
+                )}
+
+                {insights.recommendations.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold mb-2">Recommendations</p>
+                    <ul className="space-y-2">
+                      {insights.recommendations.map((r, i) => (
+                        <li key={i} className="flex gap-2 text-sm text-muted-foreground leading-relaxed">
+                          <span className="text-purple-600 shrink-0">{i + 1}.</span>
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </CardContent>
@@ -174,6 +196,7 @@ export default function InsightsPage() {
                         <TableHead className="text-center">Attendance</TableHead>
                         <TableHead className="text-center">Submissions</TableHead>
                         <TableHead className="text-center">Marks</TableHead>
+                        <TableHead className="text-center">Performance</TableHead>
                         <TableHead className="text-center">Risk</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -188,6 +211,13 @@ export default function InsightsPage() {
                           <TableCell className="text-center">{getAttBadge(s.attendancePercentage)}</TableCell>
                           <TableCell className="text-center">{s.assignmentsSubmitted}/{s.totalAssignments} ({s.submissionRate}%)</TableCell>
                           <TableCell className="text-center">{s.averageMarks}%</TableCell>
+                          <TableCell className="text-center">
+                            {s.performance === "high"
+                              ? <Badge className="bg-purple-600">High Performer</Badge>
+                              : s.performance === "low"
+                                ? <Badge variant="outline">Needs Attention</Badge>
+                                : <Badge variant="outline">Average</Badge>}
+                          </TableCell>
                           <TableCell className="text-center">{getRiskBadge(s.riskLevel)}</TableCell>
                         </TableRow>
                       ))}
