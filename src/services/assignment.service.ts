@@ -126,10 +126,17 @@ export async function saveSubmissions(assignmentId: string, submissions: {
   const assignment = await Assignment.findOne({ _id: assignmentId });
   if (!assignment) throw new ApiError(404, "Assignment not found");
 
+  const invalid = submissions.find(
+    (sub) => sub.status === "NOT_SUBMITTED" && sub.marks != null
+  );
+  if (invalid) {
+    throw new ApiError(422, "Marks cannot be assigned until the submission is marked as Submitted or Late");
+  }
+
   const upserts = submissions.map((sub) =>
     AssignmentSubmission.findOneAndUpdate(
       { assignmentId, studentId: sub.studentId },
-      { status: sub.status, marks: sub.marks ?? null },
+      { status: sub.status, marks: sub.status === "NOT_SUBMITTED" ? null : sub.marks ?? null },
       { upsert: true, new: true }
     )
   );
@@ -140,5 +147,5 @@ export async function saveSubmissions(assignmentId: string, submissions: {
     .populate("studentId", "name rollNumber")
     .lean();
 
-  return { ...assignment.toObject(), submissions: updatedSubmissions };
+  return { ...assignment.toObject(), submissions: updatedSubmissions.map(toClientSubmission) };
 }
