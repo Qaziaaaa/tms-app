@@ -48,6 +48,8 @@ export interface StudentInsight {
   totalAssignments: number;
   assignmentsSubmitted: number;
   riskLevel: "low" | "medium" | "high";
+  riskScore?: number;
+  performance: "high" | "average" | "low";
   aiAnalysis: string;
 }
 
@@ -58,7 +60,9 @@ export interface ClassInsight {
   averageAttendance: number;
   averageSubmissionRate: number;
   atRiskStudents: number;
-  cramStudents: StudentInsight[];
+  summary: string;
+  highPerformers: StudentInsight[];
+  recommendations: string[];
   students: StudentInsight[];
 }
 
@@ -71,27 +75,31 @@ async function getClassDataForAI(classId: string) {
   const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
 
   const totalSessions = await AttendanceSession.countDocuments({ classId });
-  const totalAssignments = await Assignment.countDocuments({ classId });
+  const assignments = await Assignment.find({ classId }).select("_id totalMarks").lean();
+  const totalAssignments = assignments.length;
+  const totalPossibleMarks = assignments.reduce((sum, a) => sum + (a.totalMarks ?? 0), 0);
+  const assignmentIds = assignments.map((a) => a._id);
+  const sessionIds = await AttendanceSession.find({ classId }).select("_id").lean();
 
   const studentData = await Promise.all(
     students.map(async (student) => {
       const sessionsAttended = await AttendanceRecord.countDocuments({
         studentId: student._id,
-        sessionId: { $in: (await AttendanceSession.find({ classId }).select("_id").lean()).map((s) => s._id) },
+        sessionId: { $in: sessionIds.map((s) => s._id) },
         status: "PRESENT",
       });
 
       const submissions = await AssignmentSubmission.find({
         studentId: student._id,
-        assignmentId: { $in: (await Assignment.find({ classId }).select("_id").lean()).map((a) => a._id) },
+        assignmentId: { $in: assignmentIds },
       }).lean();
 
-      const submittedCount = submissions.filter(
+      const graded = submissions.filter(
         (s) => s.status === "SUBMITTED" || s.status === "LATE"
-      ).length;
+      );
 
-      const totalMarksObtained = submissions.reduce((sum, s) => sum + (s.marks ?? 0), 0);
-      const totalPossibleMarks = totalAssignments * 100;
+      const submittedCount = graded.length;
+      const totalMarksObtained = graded.reduce((sum, s) => sum + (s.marks ?? 0), 0);
 
       const attendancePercentage = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0;
       const submissionRate = totalAssignments > 0 ? Math.round((submittedCount / totalAssignments) * 100) : 0;
@@ -122,18 +130,50 @@ export async function getAIInsights(classId: string): Promise<ClassInsight> {
   }
 
   const studentsWithRisk = data.students.map((s) => {
+    const { ATTENDANCE, SUBMISSION, MARKS } = AI_CONFIG.RISK_WEIGHTS;
+
+    const attendanceDeficit = 100 - s.attendancePercentage;
+    const submissionDeficit = 100 - s.submissionRate;
+    const marksDeficit = 100 - s.averageMarks;
+
+    const riskScore = Math.round(
+      ATTENDANCE * attendanceDeficit +
+      SUBMISSION * submissionDeficit +
+      MARKS * marksDeficit
+    );
+
+    const poorAttendance = s.attendancePercentage < AI_CONFIG.RISK_THRESHOLDS.ATTENDANCE_HIGH;
+    const poorSubmission = s.submissionRate < AI_CONFIG.RISK_THRESHOLDS.SUBMISSION_HIGH;
+    const poorMarks = s.averageMarks < AI_CONFIG.RISK_THRESHOLDS.MARKS_HIGH;
+
     let riskLevel: "low" | "medium" | "high" = "low";
-    if (s.attendancePercentage < AI_CONFIG.RISK_THRESHOLDS.ATTENDANCE_HIGH || s.submissionRate < AI_CONFIG.RISK_THRESHOLDS.SUBMISSION_HIGH) riskLevel = "high";
-    else if (s.attendancePercentage < AI_CONFIG.RISK_THRESHOLDS.ATTENDANCE_MEDIUM || s.submissionRate < AI_CONFIG.RISK_THRESHOLDS.SUBMISSION_MEDIUM) riskLevel = "medium";
-    return { ...s, riskLevel, aiAnalysis: "" };
+    if (riskScore >= AI_CONFIG.RISK_SCORE.HIGH || (poorAttendance && poorMarks) || (poorSubmission && poorMarks)) {
+      riskLevel = "high";
+    } else if (riskScore >= AI_CONFIG.RISK_SCORE.MEDIUM || (poorAttendance && poorSubmission)) {
+      riskLevel = "medium";
+    }
+
+    const isHighPerformer =
+      s.averageMarks >= AI_CONFIG.PERFORMANCE.HIGH_MARKS &&
+      s.submissionRate >= AI_CONFIG.PERFORMANCE.HIGH_SUBMISSION;
+    const performance: "high" | "average" | "low" = isHighPerformer
+      ? "high"
+      : s.averageMarks < AI_CONFIG.PERFORMANCE.HIGH_MARKS ||
+          s.submissionRate < AI_CONFIG.PERFORMANCE.HIGH_SUBMISSION
+        ? "low"
+        : "average";
+
+    return { ...s, riskLevel, riskScore, performance, aiAnalysis: "" };
   });
 
   const atRiskStudents = studentsWithRisk.filter((s) => s.riskLevel === "high" || s.riskLevel === "medium");
+  const highPerformers = studentsWithRisk.filter((s) => s.performance === "high");
 
-  let aiAnalysis: string[] = [];
+  let summary = "";
+  let recommendations: string[] = [];
 
   try {
-    const prompt = `Analyze this class data for cram students (students who only attend before exams).
+    const prompt = `Analyze student performance for a class and provide a concise, encouraging summary plus actionable recommendations.
 
 Class: ${data.cls.name} (${data.cls.department}, Batch ${data.cls.batch})
 Total Sessions: ${data.totalSessions}
@@ -141,13 +181,14 @@ Total Assignments: ${data.totalAssignments}
 
 Student Data:
 ${JSON.stringify(
-  data.students.map((s) => ({
+  studentsWithRisk.map((s) => ({
     name: s.name,
     roll: s.rollNumber,
     attendance: s.attendancePercentage + "%",
-    sessions: `${s.sessionsAttended}/${s.totalSessions}`,
     submissions: `${s.assignmentsSubmitted}/${s.totalAssignments}`,
     marks: s.averageMarks + "%",
+    riskLevel: s.riskLevel,
+    performance: s.performance,
   })),
   null,
   2
@@ -155,24 +196,28 @@ ${JSON.stringify(
 
 Return JSON with this exact structure:
 {
-  "analysis": "brief overall class summary (2-3 sentences)",
-  "cramStudents": ["list of student names who appear to be cram students based on patterns"],
-  "recommendations": ["actionable recommendations for the teacher"]
+  "summary": "a 2-3 sentence overall class summary that is factual and encouraging",
+  "recommendations": ["3-4 concise, actionable recommendations for the teacher"]
 }`;
 
     const response = await callGroq(prompt);
+
+    let parsed: Record<string, unknown> = {};
     try {
-      const parsed = JSON.parse(response);
-      aiAnalysis = [
-        parsed.analysis || "",
-        ...(parsed.cramStudents?.length ? [`Likely cram students: ${parsed.cramStudents.join(", ")}`] : []),
-        ...(parsed.recommendations || []),
-      ];
+      const cleaned = response.replace(/```json|```/g, "").trim();
+      const start = cleaned.indexOf("{");
+      const end = cleaned.lastIndexOf("}");
+      parsed = JSON.parse(cleaned.slice(start >= 0 ? start : 0, end >= 0 ? end + 1 : undefined));
     } catch {
-      aiAnalysis = [response];
+      parsed = {};
     }
+
+    summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
+    recommendations = Array.isArray(parsed.recommendations)
+      ? parsed.recommendations.filter((r): r is string => typeof r === "string").map((r) => r.trim()).filter(Boolean)
+      : [];
   } catch {
-    aiAnalysis = ["AI analysis unavailable. Configure GROQ_API_KEY in .env to enable."];
+    summary = "AI analysis unavailable. Configure GROQ_API_KEY in .env to enable.";
   }
 
   const avgAttendance = data.students.length > 0
@@ -189,7 +234,9 @@ Return JSON with this exact structure:
     averageAttendance: avgAttendance,
     averageSubmissionRate: avgSubmission,
     atRiskStudents: atRiskStudents.length,
-    cramStudents: studentsWithRisk.filter((s) => aiAnalysis.some((a) => a.includes(s.name))),
+    summary,
+    highPerformers,
+    recommendations,
     students: studentsWithRisk,
   };
 }

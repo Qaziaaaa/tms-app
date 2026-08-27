@@ -33,6 +33,21 @@ export const AI_CONFIG = {
     ATTENDANCE_MEDIUM: 30,
     SUBMISSION_HIGH: 60,
     SUBMISSION_MEDIUM: 50,
+    MARKS_HIGH: 40,
+    MARKS_MEDIUM: 30,
+  },
+  RISK_WEIGHTS: {
+    ATTENDANCE: 0.4,
+    SUBMISSION: 0.3,
+    MARKS: 0.3,
+  },
+  RISK_SCORE: {
+    HIGH: 50,
+    MEDIUM: 35,
+  },
+  PERFORMANCE: {
+    HIGH_MARKS: 60,
+    HIGH_SUBMISSION: 60,
   },
 } as const;
 
