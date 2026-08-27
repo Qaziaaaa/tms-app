@@ -24,7 +24,7 @@ export const APP_NAME = "TMS";
 export const APP_FULL_NAME = "Teacher Management System";
 
 export const AI_CONFIG = {
-  MODEL: "llama-3.1-8b-instant",
+  MODEL: "groq/compound-mini",
   TEMPERATURE: 0.3,
   MAX_TOKENS: 2000,
   API_URL: "https://api.groq.com/openai/v1/chat/completions",
