@@ -153,6 +153,7 @@ export interface StudentInsightDTO {
   totalAssignments: number;
   assignmentsSubmitted: number;
   riskLevel: "low" | "medium" | "high";
+  performance: "high" | "average" | "low";
   aiAnalysis: string;
 }
 
@@ -163,7 +164,9 @@ export interface ClassInsightDTO {
   averageAttendance: number;
   averageSubmissionRate: number;
   atRiskStudents: number;
-  cramStudents: StudentInsightDTO[];
+  summary: string;
+  highPerformers: StudentInsightDTO[];
+  recommendations: string[];
   students: StudentInsightDTO[];
 }
 
