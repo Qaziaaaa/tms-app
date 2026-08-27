@@ -3,6 +3,25 @@ import { connectDB } from "@/lib/db";
 import { Assignment, AssignmentSubmission, Student } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 
+function toClientSubmission(sub: Record<string, unknown>) {
+  const populated = sub.studentId as unknown as
+    | { _id?: unknown; id?: unknown; name?: string; rollNumber?: string }
+    | null
+    | undefined;
+
+  const { _id, id, name, rollNumber } = populated ?? {};
+
+  return {
+    ...sub,
+    studentId: id != null ? String(id) : _id != null ? String(_id) : undefined,
+    student: {
+      id: id != null ? String(id) : _id != null ? String(_id) : undefined,
+      name: name ?? "",
+      rollNumber: rollNumber ?? "",
+    },
+  };
+}
+
 export async function getAssignments(classId: string | null) {
   await connectDB();
   const filter: Record<string, unknown> = classId ? { classId } : {};
@@ -29,12 +48,12 @@ export async function getAssignmentById(id: string) {
     .lean();
 
   submissions.sort((a, b) => {
-    const aRoll = (a.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
-    const bRoll = (b.studentId as unknown as { rollNumber: number })?.rollNumber ?? 0;
-    return aRoll - bRoll;
+    const aRoll = (a.studentId as unknown as { rollNumber?: string })?.rollNumber ?? "0";
+    const bRoll = (b.studentId as unknown as { rollNumber?: string })?.rollNumber ?? "0";
+    return String(aRoll).localeCompare(String(bRoll), undefined, { numeric: true });
   });
 
-  return { ...assignment, submissions };
+  return { ...assignment, submissions: submissions.map(toClientSubmission) };
 }
 
 export async function createAssignment(data: {
