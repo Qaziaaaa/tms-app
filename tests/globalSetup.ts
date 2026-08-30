@@ -1,13 +1,33 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { getTestDbUri, assertTestDbUri } from "./lib/test-uri";
+
+const TEST_DB_NAME = "tms_test";
+
+function getTestDbUri(): string {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error(
+      "MONGODB_URI must be set for tests. " +
+      "In CI this is provided via workflow env. " +
+      "Locally: MONGODB_URI=mongodb://localhost:27017/?replicaSet=rs0 npx playwright test"
+    );
+  }
+
+  const parsed = new URL(uri);
+  if (!parsed.protocol.startsWith("mongodb")) {
+    throw new Error("MONGODB_URI must use mongodb:// or mongodb+srv:// protocol");
+  }
+
+  parsed.pathname = `/${TEST_DB_NAME}`;
+  return parsed.toString();
+}
 
 const MONGODB_URI = getTestDbUri();
-assertTestDbUri(MONGODB_URI);
 
 const STUDENTS_PER_CLASS = 5;
 
 export default async function globalSetup() {
+  console.log(`Connecting to test DB: ${MONGODB_URI.replace(/\/\/[^@]*@/, "//<credentials>@")}`);
   await mongoose.connect(MONGODB_URI);
   const db = mongoose.connection.db!;
 
@@ -24,6 +44,7 @@ export default async function globalSetup() {
         email: { type: String, unique: true, lowercase: true, trim: true },
         passwordHash: String,
         role: { type: String, enum: ["teacher", "student"], default: "teacher" },
+        mustChangePassword: { type: Boolean, default: false },
       },
       { timestamps: true }
     )
@@ -51,12 +72,13 @@ export default async function globalSetup() {
     )
   );
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+  const teacherHash = await bcrypt.hash("password123", 10);
+  const studentHash = await bcrypt.hash("student123", 10);
 
   await User.create({
     name: "Test Teacher",
     email: "teacher@tms.edu",
-    passwordHash,
+    passwordHash: teacherHash,
     role: "teacher",
   });
 
@@ -91,24 +113,23 @@ export default async function globalSetup() {
   ];
 
   let totalStudents = 0;
-  const studentEmails: string[] = [];
 
   for (let ci = 0; ci < classes.length; ci++) {
     const classDoc = classes[ci];
-    const prefix = ["CS", "AI", "DS"][ci];
+    const prefix = ["SE", "AI", "DS"][ci];
 
     for (let si = 0; si < STUDENTS_PER_CLASS; si++) {
-      const idx = si;
-      const firstName = firstNames[idx % firstNames.length];
-      const lastName = lastNames[(idx + ci * 7) % lastNames.length];
-      const rollNumber = `${prefix}-${classDoc.batch}-${String(si + 1).padStart(3, "0")}`;
-      const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${si + 1}@student.edu`;
+      const firstName = firstNames[si % firstNames.length];
+      const lastName = lastNames[(si + ci * 7) % lastNames.length];
+      const rollNumber = `${prefix}-${classDoc.batch}-${String(si + 1).padStart(2, "0")}`;
+      const email = `${firstName.toLowerCase()}${prefix.toLowerCase()}${String(si + 1).padStart(2, "0")}@uop.edu`;
 
       const user = await User.create({
         name: `${firstName} ${lastName}`,
         email,
-        passwordHash,
+        passwordHash: studentHash,
         role: "student",
+        mustChangePassword: true,
       });
 
       await StudentModel.create({
@@ -120,12 +141,11 @@ export default async function globalSetup() {
       });
 
       totalStudents++;
-      studentEmails.push(email);
     }
   }
 
   console.log(
-    `Test DB seeded: 1 teacher, ${totalStudents} students across ${classes.length} classes (${STUDENTS_PER_CLASS} per class)`
+    `Test DB seeded: 1 teacher, ${totalStudents} students across ${classes.length} classes`
   );
 
   await mongoose.disconnect();

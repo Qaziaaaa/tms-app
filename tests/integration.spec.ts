@@ -119,7 +119,7 @@ test.describe("Integration: Teacher -> Student Data Flow", () => {
     const studentsRes = await request.get(`/api/students?classId=${classId}`);
     const studentsJson = await studentsRes.json();
     const students = studentsJson.data?.students || studentsJson.data || [];
-    const targetStudent = students.find((s: { email: string }) => s.email === "ahmed.khan1@student.edu") || students[0];
+    const targetStudent = students.find((s: { email: string }) => s.email === "ahmedse01@uop.edu") || students[0];
 
     const sessionId = await ensureTeacherSession(request, classId);
     expect(sessionId).toBeTruthy();

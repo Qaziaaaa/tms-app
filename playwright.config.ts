@@ -1,10 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import "dotenv/config";
-import { getTestDbUri } from "./tests/lib/test-uri";
 
 const PORT = process.env.PORT || 3000;
 const BASE_URL = `http://localhost:${PORT}`;
-const TEST_DB_URI = getTestDbUri();
 
 export default defineConfig({
   testDir: "./tests",
@@ -26,11 +24,10 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     port: Number(PORT),
-    reuseExistingServer: false,
+    reuseExistingServer: true,
     timeout: 30_000,
     env: {
       ...process.env,
-      MONGODB_URI: TEST_DB_URI,
       TMS_TEST_MODE: "1",
     },
   },

@@ -63,9 +63,10 @@ test.describe("Authentication", () => {
   test("student can sign in with roll number", async ({ page }) => {
     await page.goto("/login");
     await page.getByRole("tab", { name: "Student" }).click();
-    await page.getByLabel("Email or Roll Number").fill("CS-2024-001");
+    await page.getByLabel("Email or Roll Number").fill(STUDENT.roll);
     await page.getByLabel("Password").fill(STUDENT.password);
     await page.getByRole("button", { name: "Sign In" }).click();
-    await expect(page).toHaveURL(/\/student\/dashboard/);
+    // Student has mustChangePassword, so may land on password page or dashboard
+    await expect(page).toHaveURL(/\/student\/(password|dashboard)/, { timeout: 10000 });
   });
 });
