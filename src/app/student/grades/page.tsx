@@ -4,20 +4,12 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { StudentShell } from "@/components/layout/student-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { TrendingUp, Award, BarChart3 } from "lucide-react";
+import { TrendingUp, Award, BarChart3, GraduationCap } from "lucide-react";
 import { getStudentGrades } from "@/lib/api";
 import type { PortalGradesDTO } from "@/types/api";
 
@@ -78,67 +70,58 @@ export default function StudentGrades() {
 
   return (
     <StudentShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
-      <div className="space-y-6">
+      <div className="page-stack">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">My Grades</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">View your assignment scores and performance</p>
+          <h2 className="page-title">My Grades</h2>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">View your assignment scores and performance.</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28" />)
-            : data?.summary && (
-                <>
-                  <Card className="card-shadow">
-                    <CardContent className="flex items-center gap-4 p-5">
-                      <div className="rounded-xl bg-emerald-500/10 p-3">
-                        <Award className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Marks Obtained</p>
-                        <p className="text-2xl font-bold">{data.summary.totalMarksObtained}</p>
-                        <p className="text-xs text-muted-foreground">out of {data.summary.totalPossibleMarks}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="card-shadow">
-                    <CardContent className="flex items-center gap-4 p-5">
-                      <div className="rounded-xl bg-blue-500/10 p-3">
-                        <TrendingUp className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overall Average</p>
-                        <p className="text-2xl font-bold">{data.summary.overallPercentage}%</p>
-                        <p className="text-xs text-muted-foreground">
-                          {data.summary.overallPercentage >= 70 ? "Passing" : "Needs improvement"}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="card-shadow">
-                    <CardContent className="flex items-center gap-4 p-5">
-                      <div className="rounded-xl bg-purple-500/10 p-3">
-                        <BarChart3 className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Assignments</p>
-                        <p className="text-2xl font-bold">{data.grades.length}</p>
-                        <p className="text-xs text-muted-foreground">total assignments</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)
+          ) : (
+            <>
+              <StatCard
+                label="Marks Obtained"
+                value={data?.summary.totalMarksObtained ?? 0}
+                subtitle={`out of ${data?.summary.totalPossibleMarks ?? 0}`}
+                subtitleColor="hsl(var(--clr-green))"
+                icon={Award}
+                iconBg="hsl(var(--clr-green-bg))"
+                iconColor="hsl(var(--clr-green))"
+              />
+              <StatCard
+                label="Overall Average"
+                value={`${data?.summary.overallPercentage ?? 0}%`}
+                subtitle={(data?.summary.overallPercentage ?? 0) >= 70 ? "Passing" : "Needs improvement"}
+                subtitleColor={
+                  (data?.summary.overallPercentage ?? 0) >= 70 ? "hsl(var(--clr-green))" : "hsl(var(--clr-amber))"
+                }
+                icon={TrendingUp}
+                iconBg="hsl(var(--clr-blue-bg))"
+                iconColor="hsl(var(--clr-blue))"
+              />
+              <StatCard
+                label="Assignments"
+                value={data?.grades.length ?? 0}
+                subtitle="total assignments"
+                subtitleColor="hsl(var(--clr-purple))"
+                icon={BarChart3}
+                iconBg="hsl(var(--clr-purple-bg))"
+                iconColor="hsl(var(--clr-purple))"
+              />
+            </>
+          )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           {!loading && data?.gradeTrend && data.gradeTrend.length > 0 && (
-            <Card className="card-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Score Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={barConfig} className="h-[260px] w-full">
+            <div className="surface">
+              <div className="surface-header">
+                <h3 className="text-base font-semibold text-card-foreground">Score Trend</h3>
+              </div>
+              <div className="p-2.5">
+                <ChartContainer config={barConfig} className="h-[240px] w-full">
                   <BarChart data={data.gradeTrend}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="title" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={60} />
@@ -147,100 +130,94 @@ export default function StudentGrades() {
                     <Bar dataKey="percentage" fill="var(--clr-blue)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           {!loading && pieData.length > 0 && (
-            <Card className="card-shadow">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Grade Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-6">
-                  <ChartContainer config={distributionConfig} className="h-[200px] w-[200px]">
-                    <PieChart>
-                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
-                        {pieData.map((entry, index) => (
-                          <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                    </PieChart>
-                  </ChartContainer>
-                  <div className="space-y-2">
-                    {pieData.map((d, i) => (
-                      <div key={d.name} className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
-                        <span className="text-sm text-muted-foreground">{d.name}</span>
-                        <span className="text-sm font-semibold ml-auto">{d.value}</span>
-                      </div>
-                    ))}
-                  </div>
+            <div className="surface">
+              <div className="surface-header">
+                <h3 className="text-base font-semibold text-card-foreground">Grade Distribution</h3>
+              </div>
+              <div className="flex items-center gap-6 p-3">
+                <ChartContainer config={distributionConfig} className="h-[190px] w-[190px]">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                      {pieData.map((entry, index) => (
+                        <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ChartContainer>
+                <div className="space-y-2">
+                  {pieData.map((d, i) => (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                      <span className="text-sm text-muted-foreground">{d.name}</span>
+                      <span className="ml-auto text-sm font-semibold">{d.value}</span>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
 
-        <Card className="card-shadow">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Grade Breakdown</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12" />
-                ))}
-              </div>
-            ) : data?.grades.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No grades available yet.</p>
-            ) : (
-              <div className="rounded-lg border border-border/50 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead className="font-semibold">Assignment</TableHead>
-                      <TableHead className="font-semibold">Marks</TableHead>
-                      <TableHead className="font-semibold">Percentage</TableHead>
-                      <TableHead className="font-semibold">Grade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data?.grades.map((g) => {
-                      const grade = getGradeBadge(g.percentage);
-                      return (
-                        <TableRow key={g.assignmentId}>
-                          <TableCell className="font-medium">{g.title}</TableCell>
-                          <TableCell>
-                            {g.marks}/{g.totalMarks}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-primary transition-all"
-                                  style={{ width: `${g.percentage}%` }}
-                                />
-                              </div>
-                              <span className="text-sm font-medium">{g.percentage}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={grade.variant} className="text-xs">
-                              {grade.label}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="surface">
+          <div className="surface-header">
+            <h3 className="text-base font-semibold text-card-foreground">Grade Breakdown</h3>
+            <p className="text-[13px] text-muted-foreground">Marks and grade per assignment.</p>
+          </div>
+
+          {loading ? (
+            <div className="space-y-1 p-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-14" />
+              ))}
+            </div>
+          ) : !data || data.grades.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+              <GraduationCap className="mb-2 h-8 w-8" />
+              <p className="text-sm">No grades available yet.</p>
+            </div>
+          ) : (
+            <div>
+              {data.grades.map((g, index) => {
+                const grade = getGradeBadge(g.percentage);
+                return (
+                  <div
+                    key={g.assignmentId}
+                    className={`flex flex-col gap-1 p-2 hover:bg-muted sm:flex-row sm:items-center sm:justify-between ${
+                      index < data.grades.length - 1 ? "border-b border-border" : ""
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[13px] font-medium text-card-foreground">{g.title}</span>
+                        <Badge variant={grade.variant} className="text-xs">
+                          {grade.label}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {g.marks}/{g.totalMarks} marks
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <div className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-clr-blue transition-all"
+                          style={{ width: `${g.percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold text-card-foreground">{g.percentage}%</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </StudentShell>
   );

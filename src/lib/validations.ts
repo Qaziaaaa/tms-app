@@ -13,6 +13,7 @@ export const createStudentSchema = z.object({
   rollNumber: z.string().min(1, "Roll number is required").max(20),
   name: z.string().min(1, "Name is required").max(100),
   classId: z.string().min(1, "Class is required"),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
 });
 
 export const bulkStudentSchema = z.object({
@@ -20,6 +21,7 @@ export const bulkStudentSchema = z.object({
   students: z.array(z.object({
     rollNumber: z.string().min(1),
     name: z.string().min(1),
+    email: z.string().optional().or(z.literal("")),
   })).min(1, "At least one student required"),
 });
 
@@ -50,13 +52,22 @@ export const updateAssignmentSchema = createAssignmentSchema.partial();
 
 export const submissionRecordSchema = z.object({
   studentId: z.string().min(1),
-  status: z.enum(["SUBMITTED", "LATE", "NOT_SUBMITTED"]),
+  status: z.enum(["SUBMITTED", "LATE", "NOT_SUBMITTED", "TURNED_IN"]),
   marks: z.number().int().min(0).optional().nullable(),
 });
 
 export const saveSubmissionsSchema = z.object({
   submissions: z.array(submissionRecordSchema).min(1),
 });
+
+export const turnInSubmissionSchema = z.object({
+  assignmentId: z.string().min(1),
+  submissionLink: z.string().trim().url("Please provide a valid URL").optional().or(z.literal("")),
+  submissionNote: z.string().trim().max(1000).optional().or(z.literal("")),
+}).refine(
+  (data) => Boolean(data.submissionLink?.trim() || data.submissionNote?.trim()),
+  { message: "Add a URL link or a note before turning in.", path: ["submissionLink"] }
+);
 
 export type CreateClassInput = z.infer<typeof createClassSchema>;
 export type UpdateClassInput = z.infer<typeof updateClassSchema>;

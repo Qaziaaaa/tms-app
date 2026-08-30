@@ -59,6 +59,7 @@ export interface AssignmentDTO {
   dueDate: string;
   totalMarks: number;
   submissionCount?: number;
+  awaitingReviewCount?: number;
 }
 
 export interface SubmissionDTO {
@@ -66,6 +67,10 @@ export interface SubmissionDTO {
   studentId: string;
   status: string;
   marks: number | null;
+  submissionLink?: string | null;
+  submissionNote?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
   student: { id: string; name: string; rollNumber: string };
 }
 
@@ -157,6 +162,15 @@ export interface StudentInsightDTO {
   aiAnalysis: string;
 }
 
+export interface StudentCategory {
+  name: string;
+  rollNumber: string;
+  attendance: number;
+  submissionRate: number;
+  marks: number;
+  brief: string;
+}
+
 export interface ClassInsightDTO {
   classId: string;
   className: string;
@@ -165,8 +179,12 @@ export interface ClassInsightDTO {
   averageSubmissionRate: number;
   atRiskStudents: number;
   summary: string;
-  highPerformers: StudentInsightDTO[];
   recommendations: string[];
+  categories: {
+    top: StudentCategory[];
+    average: StudentCategory[];
+    atRisk: StudentCategory[];
+  };
   students: StudentInsightDTO[];
 }
 
@@ -208,10 +226,18 @@ export interface PortalAssignmentsDTO {
     description: string | null;
     dueDate: string;
     totalMarks: number;
-    submission: { id: string; status: string; marks: number | null } | null;
+    submission: {
+      id: string;
+      status: string;
+      marks: number | null;
+      submissionLink?: string | null;
+      submissionNote?: string | null;
+      submittedAt?: string | null;
+      reviewedAt?: string | null;
+    } | null;
     isOverdue: boolean;
   }[];
-  summary: { total: number; submitted: number; pending: number; overdue: number };
+  summary: { total: number; submitted: number; awaiting: number; pending: number; overdue: number };
   upcoming: { id: string; title: string; dueDate: string; totalMarks: number }[];
 }
 

@@ -1,9 +1,10 @@
-import { apiGet, apiPut } from "@/lib/api-client";
+import { apiGet, apiPut, apiPost, apiDelete } from "@/lib/api-client";
 import type {
   PortalProfileDTO,
   PortalAttendanceDTO,
   PortalGradesDTO,
   PortalAssignmentsDTO,
+  SubmissionDTO,
 } from "@/types/api";
 
 export interface ChangePasswordPayload {
@@ -25,6 +26,19 @@ export function getStudentGrades(): Promise<PortalGradesDTO> {
 
 export function getStudentAssignments(): Promise<PortalAssignmentsDTO> {
   return apiGet<PortalAssignmentsDTO>("/student/assignments");
+}
+
+export interface TurnInPayload {
+  submissionLink?: string;
+  submissionNote?: string;
+}
+
+export function turnInAssignment(assignmentId: string, data: TurnInPayload): Promise<SubmissionDTO> {
+  return apiPost<SubmissionDTO>(`/student/assignments/${assignmentId}`, data);
+}
+
+export function unsubmitAssignment(assignmentId: string): Promise<{ id: string; status: string }> {
+  return apiDelete<{ id: string; status: string }>(`/student/assignments/${assignmentId}`);
 }
 
 export function changePassword(data: ChangePasswordPayload): Promise<{ updated: boolean }> {

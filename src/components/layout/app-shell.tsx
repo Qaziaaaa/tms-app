@@ -17,7 +17,9 @@ export function AppShell({ children, user }: AppShellProps) {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
       <div className="lg:pl-[220px] transition-all duration-300">
         <Header user={user} onMenuClick={() => setSidebarOpen(true)} />
-        <main className="p-3 sm:p-4 md:p-5">{children}</main>
+        <main className="p-3 sm:p-4 md:p-5">
+          <div className="mx-auto w-full max-w-[1440px]">{children}</div>
+        </main>
       </div>
     </div>
   );

@@ -75,6 +75,11 @@ export async function proxy(request: NextRequest) {
   }
 
   const role = token.role as string;
+  const mustChangePassword = Boolean(token.mustChangePassword);
+
+  if (role === "student" && mustChangePassword && pathname !== "/student/password" && !pathname.startsWith("/api/student/password")) {
+    return addSecurityHeaders(NextResponse.redirect(new URL("/student/password", request.url)));
+  }
 
   if (isTeacherRoute(pathname) && role !== "teacher") {
     return addSecurityHeaders(NextResponse.redirect(new URL("/login", request.url)));

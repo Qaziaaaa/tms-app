@@ -42,14 +42,14 @@ export function StatCard({
       </div>
       <div
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-full p-2.5",
-          iconBg || "bg-clr-blue-bg"
+          "flex shrink-0 items-center justify-center rounded-full bg-muted p-2.5",
+          iconBg
         )}
       >
         <Icon
           size={20}
           strokeWidth={1.75}
-          className={iconColor || "text-clr-blue"}
+          className={iconColor || "text-primary"}
         />
       </div>
     </div>

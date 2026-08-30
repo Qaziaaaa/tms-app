@@ -175,6 +175,24 @@
   .card-hover:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   }
+  .page-stack {
+    @apply grid gap-4 sm:gap-5;
+  }
+  .page-title {
+    @apply text-2xl font-semibold tracking-tight text-card-foreground;
+  }
+  .page-description {
+    @apply mt-1 text-sm text-muted-foreground;
+  }
+  .surface {
+    @apply overflow-hidden rounded-xl border bg-card shadow-sm;
+  }
+  .surface-header {
+    @apply border-b bg-muted/60 px-4 py-3;
+  }
+  .interactive-row {
+    @apply transition-colors hover:bg-muted/70 focus-within:bg-muted/70;
+  }
   .gradient-primary {
     background: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(262, 83%, 58%));
   }

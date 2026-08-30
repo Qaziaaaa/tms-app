@@ -61,13 +61,13 @@ export default function DashboardPage() {
 
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
-      <div className="grid gap-3">
+      <div className="page-stack">
         <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="page-title">
               Welcome back, {session.user.name?.split(" ")[0] || "Teacher"}
             </h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
+            <p className="page-description">
               Real-time class performance, attendance rates, and student activity.
             </p>
           </div>
@@ -151,8 +151,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-              <div className="min-w-0 rounded-lg border bg-card shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <div className="surface min-w-0">
+                <div className="surface-header flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-base font-semibold">Recent Sessions</h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">Latest attendance records across your classes</p>
@@ -220,8 +220,8 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="min-w-0 rounded-lg border bg-card shadow-sm">
-                <div className="flex items-center justify-between p-3">
+              <div className="surface min-w-0">
+                <div className="surface-header flex items-center justify-between">
                   <div>
                     <h3 className="text-base font-semibold">Recent Students</h3>
                     <p className="mt-0.5 text-xs text-muted-foreground">Newly added students</p>

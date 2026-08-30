@@ -1,3 +1,4 @@
+import "dotenv/config";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -5,6 +6,14 @@ const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   console.error("MONGODB_URI environment variable is required");
   process.exit(1);
+}
+
+const INITIAL_STUDENT_PASSWORD = "student123";
+
+function generateEmail(name: string, rollNumber: string): string {
+  const first = name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+  const suffix = rollNumber.replace(/[^0-9]/g, "").slice(-3);
+  return `${first}${suffix}@uop.edu`;
 }
 
 async function main() {
@@ -22,6 +31,7 @@ async function main() {
     email: { type: String, unique: true, lowercase: true, trim: true },
     passwordHash: String,
     role: { type: String, enum: ["teacher", "student"], default: "teacher" },
+    mustChangePassword: { type: Boolean, default: false },
   }, { timestamps: true }));
 
   const ClassModel = mongoose.model("Class", new mongoose.Schema({
@@ -39,12 +49,13 @@ async function main() {
     classId: { type: mongoose.Schema.Types.ObjectId, ref: "Class" },
   }, { timestamps: true }));
 
-  const passwordHash = await bcrypt.hash("password123", 10);
+  const teacherPwHash = await bcrypt.hash("password123", 10);
+  const studentPwHash = await bcrypt.hash(INITIAL_STUDENT_PASSWORD, 10);
 
   const teacher = await User.create({
     name: "Teacher",
     email: "teacher@tms.edu",
-    passwordHash,
+    passwordHash: teacherPwHash,
     role: "teacher",
   });
   console.log("Created teacher:", teacher.email, "id:", teacher._id);
@@ -72,43 +83,56 @@ async function main() {
 
   const studentsData = [
     { classId: seClass._id, students: [
-      { rollNumber: "CS-2024-001", name: "Ahmed Khan", email: "ahmed.khan1@student.edu" },
-      { rollNumber: "CS-2024-002", name: "Fatima Ali", email: "fatima.ali2@student.edu" },
-      { rollNumber: "CS-2024-003", name: "Hassan Ahmed", email: "hassan.ahmed3@student.edu" },
-      { rollNumber: "CS-2024-004", name: "Sara Malik", email: "sara.malik4@student.edu" },
-      { rollNumber: "CS-2024-005", name: "Usman Raza", email: "usman.raza5@student.edu" },
+      { rollNumber: "SE-01-01", name: "Ahmed Khan" },
+      { rollNumber: "SE-01-02", name: "Fatima Ali" },
+      { rollNumber: "SE-01-03", name: "Hassan Ahmed" },
+      { rollNumber: "SE-01-04", name: "Sara Malik" },
+      { rollNumber: "SE-01-05", name: "Usman Raza" },
     ]},
     { classId: aiClass._id, students: [
-      { rollNumber: "AI-2025-001", name: "Ayesha Noor", email: "ayesha.noor1@student.edu" },
-      { rollNumber: "AI-2025-002", name: "Bilal Shah", email: "bilal.shah2@student.edu" },
-      { rollNumber: "AI-2025-003", name: "Cyra Ahmed", email: "cyra.ahmed3@student.edu" },
-      { rollNumber: "AI-2025-004", name: "Danish Khan", email: "danish.khan4@student.edu" },
-      { rollNumber: "AI-2025-005", name: "Emaan Tariq", email: "emaan.tariq5@student.edu" },
+      { rollNumber: "AI-02-01", name: "Ayesha Noor" },
+      { rollNumber: "AI-02-02", name: "Bilal Shah" },
+      { rollNumber: "AI-02-03", name: "Cyra Ahmed" },
+      { rollNumber: "AI-02-04", name: "Danish Khan" },
+      { rollNumber: "AI-02-05", name: "Emaan Tariq" },
     ]},
     { classId: dsClass._id, students: [
-      { rollNumber: "DS-2024-001", name: "Farhan Ali", email: "farhan.ali1@student.edu" },
-      { rollNumber: "DS-2024-002", name: "Gulnaz Bibi", email: "gulnaz.bibi2@student.edu" },
-      { rollNumber: "DS-2024-003", name: "Hamza Tariq", email: "hamza.tariq3@student.edu" },
-      { rollNumber: "DS-2024-004", name: "Iqra Siddiqui", email: "iqra.siddiqui4@student.edu" },
-      { rollNumber: "DS-2024-005", name: "Junaid Ahmed", email: "junaid.ahmed5@student.edu" },
+      { rollNumber: "DS-03-01", name: "Farhan Ali" },
+      { rollNumber: "DS-03-02", name: "Gulnaz Bibi" },
+      { rollNumber: "DS-03-03", name: "Hamza Tariq" },
+      { rollNumber: "DS-03-04", name: "Iqra Siddiqui" },
+      { rollNumber: "DS-03-05", name: "Junaid Ahmed" },
     ]},
   ];
 
   let studentCount = 0;
+  const usedEmails = new Set<string>();
+
   for (const { classId, students } of studentsData) {
     for (const s of students) {
+      let email = generateEmail(s.name, s.rollNumber);
+      let counter = 1;
+      while (usedEmails.has(email)) {
+        const first = s.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+        const suffix = s.rollNumber.replace(/[^0-9]/g, "").slice(-3);
+        email = `${first}${counter}${suffix}@uop.edu`;
+        counter++;
+      }
+      usedEmails.add(email);
+
       const user = await User.create({
         name: s.name,
-        email: s.email,
-        passwordHash,
+        email,
+        passwordHash: studentPwHash,
         role: "student",
+        mustChangePassword: true,
       });
       await Student.create({
         rollNumber: s.rollNumber,
         name: s.name,
         classId,
         userId: String(user._id),
-        email: s.email,
+        email,
       });
       studentCount++;
     }

@@ -37,10 +37,10 @@ export default function LoginPage() {
     }
   }, [status, session, router]);
 
-  function validate(email: string, password: string) {
+  function validate(identifier: string, password: string) {
     const errors: { email?: string; password?: string } = {};
-    if (!email) errors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email";
+    if (!identifier) errors.email = role === "student" ? "Email or roll number is required" : "Email is required";
+    else if (role === "teacher" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) errors.email = "Enter a valid email";
     if (!password) errors.password = "Password is required";
     else if (password.length < 6) errors.password = "Password must be at least 6 characters";
     setFieldErrors(errors);
@@ -52,16 +52,17 @@ export default function LoginPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get("email") as string;
+    const identifier = formData.get("identifier") as string;
     const password = formData.get("password") as string;
 
-    if (!validate(email, password)) return;
+    if (!validate(identifier, password)) return;
 
     setLoading(true);
 
     try {
       const result = await signIn("credentials", {
-        email,
+        identifier,
+        portal: role,
         password,
         redirect: false,
       });
@@ -124,7 +125,7 @@ export default function LoginPage() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="login-email"
-                        name="email"
+                        name="identifier"
                         type="email"
                         placeholder="you@example.com"
                         autoComplete="email"
@@ -178,20 +179,24 @@ export default function LoginPage() {
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="student-email">Email</Label>
+                    <Label htmlFor="student-email">Email or Roll Number</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="student-email"
-                        name="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        autoComplete="email"
+                        name="identifier"
+                        type="text"
+                        placeholder="ali33@uop.edu or SE-01-33"
+                        autoComplete="username"
                         className={`pl-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
                       />
                     </div>
                     {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
                   </div>
+
+                  <p className="rounded-lg border bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+                    New students can sign in with their roll number (e.g. SE-01-33) or email (e.g. ali33@uop.edu). You must change your temporary password after first sign-in.
+                  </p>
 
                   <div className="space-y-2">
                     <Label htmlFor="student-password">Password</Label>

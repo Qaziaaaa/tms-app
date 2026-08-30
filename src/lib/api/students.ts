@@ -23,8 +23,8 @@ export function getStudentById(id: string): Promise<StudentDTO> {
   return apiGet<StudentDTO>(`/students/${id}`);
 }
 
-export function createStudent(data: CreateStudentPayload): Promise<StudentDTO> {
-  return apiPost<StudentDTO>("/students", data);
+export function createStudent(data: CreateStudentPayload): Promise<StudentDTO & { initialPassword?: string }> {
+  return apiPost<StudentDTO & { initialPassword?: string }>("/students", data);
 }
 
 export function updateStudent(id: string, data: Partial<CreateStudentPayload>): Promise<StudentDTO> {

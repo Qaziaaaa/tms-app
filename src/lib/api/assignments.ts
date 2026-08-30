@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api-client";
+import { apiGet, apiPost, apiPut, apiDelete, apiPatch } from "@/lib/api-client";
 import type {
   AssignmentDTO,
   AssignmentDetailDTO,
@@ -32,4 +32,16 @@ export function saveSubmissions(
   data: SaveSubmissionsInput
 ): Promise<{ saved: number }> {
   return apiPost<{ saved: number }>(`/assignments/${assignmentId}/submissions`, data);
+}
+
+export function reviewSubmission(
+  assignmentId: string,
+  studentId: string,
+  action: "accept" | "reject",
+  marks?: number | null
+): Promise<AssignmentDetailDTO> {
+  return apiPatch<AssignmentDetailDTO>(
+    `/assignments/${assignmentId}/submissions/${studentId}`,
+    { action, marks: marks ?? null }
+  );
 }

@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SearchBar } from "@/components/ui/search-bar";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   getAssignments,
@@ -22,6 +22,7 @@ import {
   updateAssignment,
   deleteAssignment as deleteAssignmentApi,
   saveSubmissions as saveSubmissionsApi,
+  reviewSubmission as reviewSubmissionApi,
 } from "@/lib/api";
 import { useAuthAndClasses } from "@/hooks/use-auth-and-classes";
 import { getErrorMessage } from "@/hooks/use-api-data";
@@ -49,6 +50,8 @@ export default function AssignmentsPage() {
   const [activeAssignment, setActiveAssignment] = useState<AssignmentDTO | null>(null);
   const [submissions, setSubmissions] = useState<SubmissionDTO[]>([]);
   const [subSaving, setSubSaving] = useState(false);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [reviewMarks, setReviewMarks] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
   const filteredAssignments = useMemo(() => {
@@ -56,6 +59,7 @@ export default function AssignmentsPage() {
     const q = search.trim().toLowerCase();
     return assignments.filter((a) => a.title.toLowerCase().includes(q));
   }, [assignments, search]);
+  const awaitingReviewCount = submissions.filter((submission) => submission.status === "TURNED_IN").length;
 
   useEffect(() => {
     if (selectedClassId) fetchAssignments();
@@ -153,11 +157,13 @@ export default function AssignmentsPage() {
     setSubSaving(true);
     try {
       await saveSubmissionsApi(activeAssignment.id, {
-        submissions: submissions.map(s => ({
-          studentId: s.studentId,
-          status: s.status as "SUBMITTED" | "LATE" | "NOT_SUBMITTED",
-          marks: s.marks,
-        })),
+        submissions: submissions
+          .filter((s) => s.status !== "TURNED_IN")
+          .map(s => ({
+            studentId: s.studentId,
+            status: s.status as "SUBMITTED" | "LATE" | "NOT_SUBMITTED",
+            marks: s.marks,
+          })),
       });
       toast.success("Submissions saved");
     } catch (err) {
@@ -166,21 +172,46 @@ export default function AssignmentsPage() {
     setSubSaving(false);
   }
 
+  async function handleReview(studentId: string, action: "accept" | "reject") {
+    if (!activeAssignment) return;
+    const parsedMarks = reviewMarks[studentId] ? Number(reviewMarks[studentId]) : null;
+    if (action === "accept" && parsedMarks != null && (!Number.isInteger(parsedMarks) || parsedMarks < 0 || parsedMarks > activeAssignment.totalMarks)) {
+      toast.error(`Marks must be a whole number between 0 and ${activeAssignment.totalMarks}`);
+      return;
+    }
+    setReviewingId(studentId);
+    try {
+      const marks = action === "accept" ? parsedMarks : null;
+      const detail = await reviewSubmissionApi(activeAssignment.id, studentId, action, marks);
+      const updatedSubmission = detail.submissions?.[0];
+      if (updatedSubmission) {
+        setSubmissions((current) => current.map((submission) =>
+          submission.studentId === studentId ? updatedSubmission : submission
+        ));
+      }
+      setReviewMarks((prev) => ({ ...prev, [studentId]: "" }));
+      toast.success(action === "accept" ? "Submission accepted" : "Submission returned to student");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+    setReviewingId(null);
+  }
+
   if (status === "loading" || !session?.user) {
     return <div className="flex min-h-screen items-center justify-center"><Skeleton className="h-8 w-48" /></div>;
   }
 
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
-      <div className="space-y-6">
+      <div className="page-stack">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Assignments</h1>
-            <p className="text-muted-foreground mt-0.5">Create assignments and manage student submissions</p>
+            <h1 className="page-title">Assignments</h1>
+            <p className="page-description">Create work, review submissions, and keep grading moving.</p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
+        <div className="surface flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
           {loading ? <Skeleton className="h-10 w-64" /> : (
             <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm sm:w-auto sm:max-w-[200px]">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -196,10 +227,10 @@ export default function AssignmentsPage() {
           <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-1">
-            <Card className="card-shadow">
-              <CardHeader>
+            <Card className="card-shadow h-full">
+              <CardHeader className="border-b bg-muted/60 py-3">
                 <CardTitle className="text-lg flex items-center justify-between">
                   Assignments
                   {!loadingAssignments && (
@@ -209,7 +240,7 @@ export default function AssignmentsPage() {
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 max-h-[500px] overflow-auto">
+              <CardContent className="max-h-[560px] space-y-2 overflow-auto py-3">
                 {loadingAssignments ? (
                   Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16" />)
                 ) : filteredAssignments.length === 0 ? (
@@ -218,10 +249,11 @@ export default function AssignmentsPage() {
                   </p>
                 ) : (
                   filteredAssignments.map(a => (
-                    <div key={a.id} className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${activeAssignment?.id === a.id ? "border-primary bg-primary/5" : "hover:bg-accent"}`} onClick={() => selectAssignment(a)}>
-                      <div>
+                    <div key={a.id} className={`flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors ${activeAssignment?.id === a.id ? "border-primary bg-primary/5 shadow-sm" : "hover:bg-muted"}`} onClick={() => selectAssignment(a)}>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">{a.title}</p>
-                        <p className="text-xs text-muted-foreground">Due {new Date(a.dueDate).toLocaleDateString()} &middot; {a.totalMarks} marks &middot; {a.submissionCount} submissions</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Due {new Date(a.dueDate).toLocaleDateString()} · {a.totalMarks} marks · {a.submissionCount} submissions</p>
+                        {a.awaitingReviewCount ? <Badge variant="secondary" className="mt-2 text-[10px]">{a.awaitingReviewCount} awaiting review</Badge> : null}
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEdit(a); }}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -236,10 +268,19 @@ export default function AssignmentsPage() {
 
           <div className="lg:col-span-2">
             <Card className="card-shadow">
-              <CardHeader>
+              <CardHeader className="border-b bg-muted/60 py-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{activeAssignment ? activeAssignment.title : "Select an assignment"}</CardTitle>
-                  {activeAssignment && <Button onClick={saveSubmissions} disabled={subSaving}>{subSaving ? "Saving..." : "Save Submissions"}</Button>}
+                  {activeAssignment && (
+                    <div className="flex items-center gap-2">
+                      {awaitingReviewCount > 0 && (
+                        <span className="rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                          {awaitingReviewCount} awaiting review
+                        </span>
+                      )}
+                      <Button onClick={saveSubmissions} disabled={subSaving}>{subSaving ? "Saving..." : "Save Submissions"}</Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -256,45 +297,105 @@ export default function AssignmentsPage() {
                           <TableHead>Name</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="w-24">Marks</TableHead>
+                          <TableHead className="w-28">Review</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {submissions.map(s => (
-                          <TableRow key={s.studentId}>
+                        {submissions.map(s => {
+                          const isTurnedIn = s.status === "TURNED_IN";
+                          const marksValue = reviewMarks[s.studentId] ?? "";
+                          return (
+                            <TableRow key={s.studentId}>
                               <TableCell><Badge variant="outline">{s.student.rollNumber}</Badge></TableCell>
-                            <TableCell className="font-medium">{s.student.name}</TableCell>
-                            <TableCell>
-                              <select
-                                value={s.status}
-                                onChange={(e) => updateSubmission(s.studentId, "status", e.target.value)}
-                                className={`h-7 cursor-pointer rounded-full border px-2 text-xs font-semibold outline-none transition-colors ${
-                                  s.status === "SUBMITTED"
-                                    ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                                    : s.status === "LATE"
-                                      ? "border-amber-300 bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                                      : "border-border bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                <option value="NOT_SUBMITTED">Not Submitted</option>
-                                <option value="SUBMITTED">Submitted</option>
-                                <option value="LATE">Late</option>
-                              </select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={s.marks ?? ""}
-                                onChange={(e) => updateSubmission(s.studentId, "marks", e.target.value ? parseInt(e.target.value) : null)}
-                                placeholder={`/${activeAssignment.totalMarks}`}
-                                className={`h-8 text-xs ${s.status === "NOT_SUBMITTED" ? "opacity-40" : ""}`}
-                                min={0}
-                                max={activeAssignment.totalMarks}
-                                disabled={s.status === "NOT_SUBMITTED"}
-                                title={s.status === "NOT_SUBMITTED" ? "Marks are only available for Submitted or Late submissions" : undefined}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                              <TableCell className="font-medium">{s.student.name}</TableCell>
+                              <TableCell>
+                                {isTurnedIn ? (
+                                  <div className="space-y-1">
+                                    <Badge variant="secondary">Awaiting Review</Badge>
+                                    {s.submissionLink && (
+                                      <a href={s.submissionLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                                        <LinkIcon size={12} /> View work
+                                      </a>
+                                    )}
+                                    {s.submissionNote && (
+                                      <p className="max-w-[220px] truncate text-xs text-muted-foreground" title={s.submissionNote}>
+                                        {s.submissionNote}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <select
+                                    value={s.status}
+                                    onChange={(e) => updateSubmission(s.studentId, "status", e.target.value)}
+                                    className={`h-7 cursor-pointer rounded-full border px-2 text-xs font-semibold outline-none transition-colors ${
+                                      s.status === "SUBMITTED"
+                                        ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                        : s.status === "LATE"
+                                          ? "border-amber-300 bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                          : "border-border bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    <option value="NOT_SUBMITTED">Not Submitted</option>
+                                    <option value="SUBMITTED">Submitted</option>
+                                    <option value="LATE">Late</option>
+                                  </select>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isTurnedIn ? (
+                                  <Input
+                                    type="number"
+                                    value={marksValue}
+                                    onChange={(e) => setReviewMarks((p) => ({ ...p, [s.studentId]: e.target.value }))}
+                                    placeholder={`/${activeAssignment.totalMarks}`}
+                                    className="h-8 text-xs"
+                                    min={0}
+                                    max={activeAssignment.totalMarks}
+                                    disabled={reviewingId === s.studentId}
+                                  />
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    value={s.marks ?? ""}
+                                    onChange={(e) => updateSubmission(s.studentId, "marks", e.target.value ? parseInt(e.target.value) : null)}
+                                    placeholder={`/${activeAssignment.totalMarks}`}
+                                    className={`h-8 text-xs ${s.status === "NOT_SUBMITTED" ? "opacity-40" : ""}`}
+                                    min={0}
+                                    max={activeAssignment.totalMarks}
+                                    disabled={s.status === "NOT_SUBMITTED"}
+                                    title={s.status === "NOT_SUBMITTED" ? "Marks are only available for Submitted or Late submissions" : undefined}
+                                  />
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isTurnedIn ? (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 gap-1 text-xs text-emerald-600"
+                                      disabled={reviewingId === s.studentId}
+                                      onClick={() => handleReview(s.studentId, "accept")}
+                                    >
+                                      <Check className="h-3.5 w-3.5" /> Accept
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 gap-1 text-xs text-destructive"
+                                      disabled={reviewingId === s.studentId}
+                                      onClick={() => handleReview(s.studentId, "reject")}
+                                    >
+                                      <X className="h-3.5 w-3.5" /> Reject
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

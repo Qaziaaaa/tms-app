@@ -91,8 +91,26 @@ export async function getStudentAttendance(email: string) {
     };
   });
 
+  const mappedRecords = records.map((r) => {
+    const session = r.sessionId as unknown as
+      | { _id?: unknown; id?: unknown; date?: string; classId?: { name?: string } }
+      | null
+      | undefined;
+    const sessionId = session?.id != null ? String(session.id) : session?._id != null ? String(session._id) : "";
+    return {
+      id: r._id,
+      status: r.status,
+      date: session?.date || "",
+      session: {
+        id: sessionId,
+        date: session?.date || "",
+        class: { name: session?.classId?.name || "" },
+      },
+    };
+  });
+
   return {
-    records,
+    records: mappedRecords,
     summary: { present: presentCount, absent: absentCount, totalDays, percentage },
     monthlyBreakdown,
     recentSessions,
@@ -118,21 +136,31 @@ export async function getStudentAssignments(email: string) {
 
   const enriched = assignments.map((a) => {
     const sub = submissionMap.get(String(a._id));
-    const isOverdue = !sub && new Date(a.dueDate) < now;
+    const active = sub && sub.status !== "NOT_SUBMITTED" ? sub : null;
+    const isOverdue = !active && new Date(a.dueDate) < now;
     return {
       id: a._id,
       title: a.title,
       description: a.description,
       dueDate: a.dueDate,
       totalMarks: a.totalMarks,
-      submission: sub
-        ? { id: sub._id, status: sub.status, marks: sub.marks }
+      submission: active
+        ? {
+            id: sub._id,
+            status: sub.status,
+            marks: sub.marks,
+            submissionLink: sub.submissionLink,
+            submissionNote: sub.submissionNote,
+            submittedAt: sub.submittedAt,
+            reviewedAt: sub.reviewedAt,
+          }
         : null,
       isOverdue,
     };
   });
 
   const submittedCount = enriched.filter((a) => a.submission).length;
+  const awaitingCount = enriched.filter((a) => a.submission?.status === "TURNED_IN").length;
   const pendingCount = enriched.filter((a) => !a.submission && !a.isOverdue).length;
   const overdueCount = enriched.filter((a) => !a.submission && a.isOverdue).length;
 
@@ -143,9 +171,69 @@ export async function getStudentAssignments(email: string) {
 
   return {
     assignments: enriched,
-    summary: { total: enriched.length, submitted: submittedCount, pending: pendingCount, overdue: overdueCount },
+    summary: {
+      total: enriched.length,
+      submitted: submittedCount,
+      awaiting: awaitingCount,
+      pending: pendingCount,
+      overdue: overdueCount,
+    },
     upcoming,
   };
+}
+
+export async function turnInAssignment(email: string, data: {
+  assignmentId: string;
+  submissionLink?: string;
+  submissionNote?: string;
+}) {
+  await connectDB();
+  const { student } = await findStudentByEmail(email);
+  const { assignmentId, submissionLink, submissionNote } = data;
+
+  const assignment = await Assignment.findOne({ _id: assignmentId, classId: student.classId });
+  if (!assignment) throw new ApiError(404, "Assignment not found");
+
+  const submission = await AssignmentSubmission.findOneAndUpdate(
+    { assignmentId, studentId: student._id },
+    {
+      status: "TURNED_IN",
+      submissionLink: submissionLink || undefined,
+      submissionNote: submissionNote || undefined,
+      submittedAt: new Date(),
+      reviewedAt: undefined,
+    },
+    { upsert: true, new: true }
+  ).lean();
+
+  return {
+    id: submission._id,
+    status: submission.status,
+    marks: submission.marks,
+    submissionLink: submission.submissionLink,
+    submissionNote: submission.submissionNote,
+    submittedAt: submission.submittedAt,
+    reviewedAt: submission.reviewedAt,
+  };
+}
+
+export async function unsubmitAssignment(email: string, assignmentId: string) {
+  await connectDB();
+  const { student } = await findStudentByEmail(email);
+
+  const submission = await AssignmentSubmission.findOneAndUpdate(
+    { assignmentId, studentId: student._id, status: "TURNED_IN" },
+    {
+      status: "NOT_SUBMITTED",
+      marks: null,
+      reviewedAt: undefined,
+    },
+    { new: true }
+  );
+
+  if (!submission) throw new ApiError(409, "Assignment is already reviewed and cannot be unsubmitted");
+
+  return { id: submission._id, status: submission.status };
 }
 
 export async function getStudentGrades(email: string) {
@@ -221,5 +309,6 @@ export async function changePassword(email: string, currentPassword: string, new
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   user.passwordHash = passwordHash;
+  user.mustChangePassword = false;
   await user.save();
 }

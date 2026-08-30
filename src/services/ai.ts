@@ -19,7 +19,8 @@ async function callGroq(prompt: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "You are an academic analytics assistant. Analyze student data and return JSON responses only. No markdown, no explanations outside JSON.",
+          content:
+            "You are an expert academic performance analyst. You receive structured student data and produce a clear, professional JSON report. Output ONLY valid JSON — no markdown fences, no extra text. Be specific, factual, and concise. Never fabricate data.",
         },
         { role: "user", content: prompt },
       ],
@@ -53,6 +54,15 @@ export interface StudentInsight {
   aiAnalysis: string;
 }
 
+export interface StudentCategory {
+  name: string;
+  rollNumber: string;
+  attendance: number;
+  submissionRate: number;
+  marks: number;
+  brief: string;
+}
+
 export interface ClassInsight {
   classId: string;
   className: string;
@@ -61,8 +71,12 @@ export interface ClassInsight {
   averageSubmissionRate: number;
   atRiskStudents: number;
   summary: string;
-  highPerformers: StudentInsight[];
   recommendations: string[];
+  categories: {
+    top: StudentCategory[];
+    average: StudentCategory[];
+    atRisk: StudentCategory[];
+  };
   students: StudentInsight[];
 }
 
@@ -167,37 +181,72 @@ export async function getAIInsights(classId: string): Promise<ClassInsight> {
   });
 
   const atRiskStudents = studentsWithRisk.filter((s) => s.riskLevel === "high" || s.riskLevel === "medium");
-  const highPerformers = studentsWithRisk.filter((s) => s.performance === "high");
 
+  const avgAttendance = data.students.length > 0
+    ? Math.round(data.students.reduce((sum, s) => sum + s.attendancePercentage, 0) / data.students.length)
+    : 0;
+  const avgSubmission = data.students.length > 0
+    ? Math.round(data.students.reduce((sum, s) => sum + s.submissionRate, 0) / data.students.length)
+    : 0;
+
+  let categories: { top: StudentCategory[]; average: StudentCategory[]; atRisk: StudentCategory[] } = {
+    top: [],
+    average: [],
+    atRisk: [],
+  };
   let summary = "";
   let recommendations: string[] = [];
 
   try {
-    const prompt = `Analyze student performance for a class and provide a concise, encouraging summary plus actionable recommendations.
+    const prompt = `You are analyzing a university class performance. Produce a clear, actionable JSON report.
 
-Class: ${data.cls.name} (${data.cls.department}, Batch ${data.cls.batch})
-Total Sessions: ${data.totalSessions}
-Total Assignments: ${data.totalAssignments}
+## Class Info
+Name: ${data.cls.name} | Dept: ${data.cls.department} | Batch: ${data.cls.batch}
+Total Students: ${data.students.length} | Sessions Held: ${data.totalSessions} | Assignments Given: ${data.totalAssignments}
+Class Average Attendance: ${avgAttendance}% | Class Average Submission Rate: ${avgSubmission}%
 
-Student Data:
+## Student Data
 ${JSON.stringify(
   studentsWithRisk.map((s) => ({
     name: s.name,
     roll: s.rollNumber,
     attendance: s.attendancePercentage + "%",
-    submissions: `${s.assignmentsSubmitted}/${s.totalAssignments}`,
+    submissions: `${s.assignmentsSubmitted}/${s.totalAssignments} (${s.submissionRate}%)`,
     marks: s.averageMarks + "%",
-    riskLevel: s.riskLevel,
-    performance: s.performance,
+    risk: s.riskLevel,
+    tier: s.performance,
   })),
   null,
   2
 )}
 
-Return JSON with this exact structure:
+## Instructions
+Classify EVERY student into exactly one of three tiers:
+1. **top** — Strong attendance (≥75%), high submission rate (≥70%), good marks (≥60%). These are your best students.
+2. **average** — Performing acceptably but have gaps. Not failing but not excelling.
+3. **atRisk** — Weak attendance (<50%) or very low submission rate (<50%) or poor marks (<40%). These need immediate attention.
+
+For each student, write a 1-line brief (10-15 words) summarizing their status. Be specific: mention the exact metric that matters.
+
+Return ONLY this JSON:
 {
-  "summary": "a 2-3 sentence overall class summary that is factual and encouraging",
-  "recommendations": ["3-4 concise, actionable recommendations for the teacher"]
+  "summary": "3-4 sentence overview of class health — mention overall attendance, submission trends, and how many students need attention. Be direct and factual.",
+  "categories": {
+    "top": [
+      { "name": "...", "roll": "...", "attendance": 85, "submissionRate": 90, "marks": 72, "brief": "Excellent attendance and consistent submission. Strong performer." }
+    ],
+    "average": [
+      { "name": "...", "roll": "...", "attendance": 60, "submissionRate": 55, "marks": 48, "brief": "Moderate attendance. Needs to improve submission consistency." }
+    ],
+    "atRisk": [
+      { "name": "...", "roll": "...", "attendance": 30, "submissionRate": 20, "marks": 15, "brief": "Critical: very low attendance and submissions. Immediate intervention needed." }
+    ]
+  },
+  "recommendations": [
+    "Specific actionable recommendation 1",
+    "Specific actionable recommendation 2",
+    "Specific actionable recommendation 3"
+  ]
 }`;
 
     const response = await callGroq(prompt);
@@ -214,18 +263,69 @@ Return JSON with this exact structure:
 
     summary = typeof parsed.summary === "string" ? parsed.summary.trim() : "";
     recommendations = Array.isArray(parsed.recommendations)
-      ? parsed.recommendations.filter((r): r is string => typeof r === "string").map((r) => r.trim()).filter(Boolean)
+      ? parsed.recommendations.filter((r: unknown): r is string => typeof r === "string").map((r) => r.trim()).filter(Boolean)
       : [];
+
+    if (parsed.categories && typeof parsed.categories === "object") {
+      const cat = parsed.categories as Record<string, unknown[]>;
+      const mapCategory = (items: unknown[]): StudentCategory[] =>
+        items
+          .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+          .map((item) => ({
+            name: String(item.name ?? item.name ?? ""),
+            rollNumber: String(item.roll ?? item.rollNumber ?? ""),
+            attendance: Number(item.attendance ?? 0),
+            submissionRate: Number(item.submissionRate ?? 0),
+            marks: Number(item.marks ?? 0),
+            brief: String(item.brief ?? ""),
+          }))
+          .filter((s) => s.name || s.rollNumber);
+
+      categories = {
+        top: mapCategory(cat.top ?? []),
+        average: mapCategory(cat.average ?? []),
+        atRisk: mapCategory(cat.atRisk ?? []),
+      };
+    }
   } catch {
     summary = "AI analysis unavailable. Configure GROQ_API_KEY in .env to enable.";
   }
 
-  const avgAttendance = data.students.length > 0
-    ? Math.round(data.students.reduce((sum, s) => sum + s.attendancePercentage, 0) / data.students.length)
-    : 0;
-  const avgSubmission = data.students.length > 0
-    ? Math.round(data.students.reduce((sum, s) => sum + s.submissionRate, 0) / data.students.length)
-    : 0;
+  // Fallback: if AI didn't categorize, do it ourselves
+  if (categories.top.length === 0 && categories.average.length === 0 && categories.atRisk.length === 0) {
+    categories = {
+      top: studentsWithRisk
+        .filter((s) => s.performance === "high")
+        .map((s) => ({
+          name: s.name,
+          rollNumber: s.rollNumber,
+          attendance: s.attendancePercentage,
+          submissionRate: s.submissionRate,
+          marks: s.averageMarks,
+          brief: `Attends ${s.attendancePercentage}% classes, submits ${s.submissionRate}% assignments.`,
+        })),
+      average: studentsWithRisk
+        .filter((s) => s.performance === "average")
+        .map((s) => ({
+          name: s.name,
+          rollNumber: s.rollNumber,
+          attendance: s.attendancePercentage,
+          submissionRate: s.submissionRate,
+          marks: s.averageMarks,
+          brief: `Moderate performer. Attendance ${s.attendancePercentage}%, marks ${s.averageMarks}%.`,
+        })),
+      atRisk: studentsWithRisk
+        .filter((s) => s.riskLevel === "high" || s.riskLevel === "medium")
+        .map((s) => ({
+          name: s.name,
+          rollNumber: s.rollNumber,
+          attendance: s.attendancePercentage,
+          submissionRate: s.submissionRate,
+          marks: s.averageMarks,
+          brief: `Needs attention. Attendance ${s.attendancePercentage}%, marks ${s.averageMarks}%.`,
+        })),
+    };
+  }
 
   return {
     classId: String(data.cls._id),
@@ -235,8 +335,8 @@ Return JSON with this exact structure:
     averageSubmissionRate: avgSubmission,
     atRiskStudents: atRiskStudents.length,
     summary,
-    highPerformers,
     recommendations,
+    categories,
     students: studentsWithRisk,
   };
 }

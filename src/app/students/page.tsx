@@ -38,6 +38,8 @@ export default function StudentsPage() {
 
   const [rollNumber, setRollNumber] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [emailEdited, setEmailEdited] = useState(false);
 
   const [csvText, setCsvText] = useState("");
   const [importing, setImporting] = useState(false);
@@ -72,6 +74,8 @@ export default function StudentsPage() {
     setEditStudent(null);
     setRollNumber("");
     setName("");
+    setEmail("");
+    setEmailEdited(false);
     setDialogOpen(true);
   }
 
@@ -79,16 +83,46 @@ export default function StudentsPage() {
     setEditStudent(s);
     setRollNumber(s.rollNumber);
     setName(s.name);
+    setEmail((s as unknown as { email?: string }).email ?? "");
+    setEmailEdited(true);
     setDialogOpen(true);
+  }
+
+  function autoGenerateEmail(nameVal: string, rollVal: string) {
+    const first = nameVal.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+    const suffix = rollVal.replace(/[^0-9]/g, "").slice(-3);
+    if (!first || !suffix) return "";
+    return `${first}${suffix}@uop.edu`;
+  }
+
+  function handleNameChange(val: string) {
+    setName(val);
+    if (!emailEdited) {
+      setEmail(autoGenerateEmail(val, rollNumber));
+    }
+  }
+
+  function handleRollChange(val: string) {
+    setRollNumber(val);
+    if (!emailEdited) {
+      setEmail(autoGenerateEmail(name, val));
+    }
   }
 
   async function handleSave() {
     setSaving(true);
-    const body = { rollNumber, name, classId: selectedClassId };
+    const body: Record<string, string> = { rollNumber, name, classId: selectedClassId };
+    if (email.trim()) body.email = email.trim();
     try {
-      if (editStudent) await updateStudent(editStudent.id, body);
-      else await createStudent(body);
-      toast.success(editStudent ? "Student updated" : "Student added");
+      if (editStudent) {
+        await updateStudent(editStudent.id, body as Parameters<typeof updateStudent>[1]);
+        toast.success("Student updated");
+      } else {
+        const created = await createStudent(body as Parameters<typeof createStudent>[0]);
+        toast.success("Student account created", {
+          description: `Login: ${created.email ?? email} or ${created.rollNumber}. Temporary password: ${created.initialPassword ?? "student123"}.`,
+        });
+      }
       setDialogOpen(false);
       fetchStudents();
     } catch (err) {
@@ -133,7 +167,11 @@ export default function StudentsPage() {
     const lines = csvText.trim().split("\n");
     const studentsList = lines.map(line => {
       const parts = line.split(",").map(s => s.trim());
-      return { rollNumber: parts[0] || "", name: parts.slice(1).join(" ") || "" };
+      return {
+        rollNumber: parts[0] || "",
+        name: parts[1] || "",
+        email: parts[2] || "",
+      };
     }).filter(s => s.rollNumber && s.name);
 
     try {
@@ -141,7 +179,7 @@ export default function StudentsPage() {
       if (result.skipped > 0) {
         toast.warning(`Imported ${result.created} students, skipped ${result.skipped} duplicates`);
       } else {
-        toast.success(`Imported ${result.created} students. Initial password: ${result.initialPassword ?? "Student@123"} — ask students to change it after first login.`);
+        toast.success(`Imported ${result.created} students. Initial password: ${result.initialPassword ?? "student123"} — ask students to change it after first login.`);
       }
       setCsvText("");
       fetchStudents();
@@ -246,11 +284,11 @@ export default function StudentsPage() {
                 <CardTitle className="text-lg flex items-center gap-2"><Upload className="h-4 w-4" /> CSV Import</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-xs text-muted-foreground">Paste CSV with format: <code>rollNumber,Name</code></p>
+                <p className="text-xs text-muted-foreground">CSV format: <code>rollNumber,name,email</code> (email is optional)</p>
                 <Textarea
                   value={csvText}
                   onChange={(e) => setCsvText(e.target.value)}
-                  placeholder="Roll Number, Full Name (one student per line)"
+                  placeholder="SE-01-33,Ahmed Khan,ahmed33@uop.edu&#10;SE-01-34,Fatima Ali"
                   rows={6}
                   className="font-mono text-xs"
                 />
@@ -269,12 +307,25 @@ export default function StudentsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Roll Number</Label>
-              <Input value={rollNumber} onChange={(e) => setRollNumber(e.target.value)} placeholder="e.g. CS-24-001" />
+              <Input value={rollNumber} onChange={(e) => handleRollChange(e.target.value)} placeholder="e.g. SE-01-33" />
             </div>
             <div className="space-y-2">
               <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Ahmed Khan" />
+              <Input value={name} onChange={(e) => handleNameChange(e.target.value)} placeholder="e.g. Ahmed Khan" />
             </div>
+            <div className="space-y-2">
+              <Label>Email <span className="text-muted-foreground text-xs font-normal">(auto-generated, editable)</span></Label>
+              <Input
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailEdited(true); }}
+                placeholder="e.g. ahmed33@uop.edu"
+              />
+            </div>
+            {!editStudent && (
+              <p className="rounded-lg border bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+                An account will be created automatically. The student can login with email or roll number, and must change the temporary password on first sign-in.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>

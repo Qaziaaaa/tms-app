@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, LogOut, User, Calendar } from "lucide-react";
 import { getInitials } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface HeaderProps {
   user: { name: string; email: string };
@@ -60,6 +61,9 @@ export function Header({ user, onMenuClick }: HeaderProps) {
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" /> Profile
             </DropdownMenuItem>
+            <div className="p-1">
+              <ThemeToggle />
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
               <LogOut className="mr-2 h-4 w-4" /> Sign out

@@ -19,6 +19,10 @@ function toClientSubmission(sub: Record<string, unknown>) {
       name: name ?? "",
       rollNumber: rollNumber ?? "",
     },
+    submissionLink: sub.submissionLink ? String(sub.submissionLink) : null,
+    submissionNote: sub.submissionNote ? String(sub.submissionNote) : null,
+    submittedAt: sub.submittedAt ? String(sub.submittedAt) : null,
+    reviewedAt: sub.reviewedAt ? String(sub.reviewedAt) : null,
   };
 }
 
@@ -30,8 +34,11 @@ export async function getAssignments(classId: string | null) {
 
   const assignmentsWithCount = await Promise.all(
     assignments.map(async (a) => {
-      const submissionCount = await AssignmentSubmission.countDocuments({ assignmentId: a._id });
-      return { ...a, submissionCount };
+      const [submissionCount, awaitingReviewCount] = await Promise.all([
+        AssignmentSubmission.countDocuments({ assignmentId: a._id }),
+        AssignmentSubmission.countDocuments({ assignmentId: a._id, status: "TURNED_IN" }),
+      ]);
+      return { ...a, submissionCount, awaitingReviewCount };
     })
   );
 
@@ -119,7 +126,7 @@ export async function deleteAssignment(id: string) {
 
 export async function saveSubmissions(assignmentId: string, submissions: {
   studentId: string;
-  status: "SUBMITTED" | "LATE" | "NOT_SUBMITTED";
+  status: "SUBMITTED" | "LATE" | "NOT_SUBMITTED" | "TURNED_IN";
   marks?: number | null;
 }[]) {
   await connectDB();
@@ -127,7 +134,7 @@ export async function saveSubmissions(assignmentId: string, submissions: {
   if (!assignment) throw new ApiError(404, "Assignment not found");
 
   const invalid = submissions.find(
-    (sub) => sub.status === "NOT_SUBMITTED" && sub.marks != null
+    (sub) => (sub.status === "NOT_SUBMITTED" || sub.status === "TURNED_IN") && sub.marks != null
   );
   if (invalid) {
     throw new ApiError(422, "Marks cannot be assigned until the submission is marked as Submitted or Late");
@@ -136,7 +143,12 @@ export async function saveSubmissions(assignmentId: string, submissions: {
   const upserts = submissions.map((sub) =>
     AssignmentSubmission.findOneAndUpdate(
       { assignmentId, studentId: sub.studentId },
-      { status: sub.status, marks: sub.status === "NOT_SUBMITTED" ? null : sub.marks ?? null },
+      {
+        status: sub.status,
+        marks: sub.status === "NOT_SUBMITTED" || sub.status === "TURNED_IN" ? null : sub.marks ?? null,
+        reviewedAt:
+          sub.status === "SUBMITTED" || sub.status === "LATE" ? new Date() : undefined,
+      },
       { upsert: true, new: true }
     )
   );
@@ -148,4 +160,42 @@ export async function saveSubmissions(assignmentId: string, submissions: {
     .lean();
 
   return { ...assignment.toObject(), submissions: updatedSubmissions.map(toClientSubmission) };
+}
+
+export async function reviewSubmission(
+  assignmentId: string,
+  studentId: string,
+  action: "accept" | "reject",
+  marks?: number | null
+) {
+  await connectDB();
+  const assignment = await Assignment.findOne({ _id: assignmentId });
+  if (!assignment) throw new ApiError(404, "Assignment not found");
+
+  const submission = await AssignmentSubmission.findOne({ assignmentId, studentId });
+  if (!submission) throw new ApiError(404, "Submission not found");
+  if (submission.status !== "TURNED_IN") {
+    throw new ApiError(409, "Only submissions awaiting review can be reviewed");
+  }
+
+  if (action === "accept") {
+    if (marks != null && (marks < 0 || marks > assignment.totalMarks)) {
+      throw new ApiError(422, `Marks must be between 0 and ${assignment.totalMarks}`);
+    }
+    const isLate = new Date(assignment.dueDate) < new Date();
+    submission.status = isLate ? "LATE" : "SUBMITTED";
+    submission.marks = marks;
+  } else {
+    submission.status = "NOT_SUBMITTED";
+    submission.marks = null;
+    submission.submittedAt = undefined;
+  }
+  submission.reviewedAt = new Date();
+  await submission.save();
+
+  const updated = await AssignmentSubmission.findById(submission._id)
+    .populate("studentId", "name rollNumber")
+    .lean();
+
+  return { ...assignment.toObject(), submissions: ([] as unknown[]).concat(toClientSubmission(updated)) };
 }

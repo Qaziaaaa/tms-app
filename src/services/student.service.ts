@@ -1,8 +1,18 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
-import { Class, Student } from "@/models";
+import { Class, Student, User } from "@/models";
 import { ApiError } from "@/lib/api-utils";
+
+export const INITIAL_STUDENT_PASSWORD = "student123";
+const EMAIL_DOMAIN = "uop.edu";
+const BULK_IMPORT_MAX_ROWS = 1000;
+
+function generateEmail(name: string, rollNumber: string): string {
+  const first = name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+  const suffix = rollNumber.replace(/[^0-9]/g, "").slice(-3);
+  return `${first}${suffix}@${EMAIL_DOMAIN}`;
+}
 
 export async function getStudents(classId: string | null, page: number, pageSize: number) {
   await connectDB();
@@ -29,9 +39,44 @@ export async function getStudentById(id: string) {
   return student;
 }
 
-export async function createStudent(data: { rollNumber: string; name: string; classId: string }) {
+export async function createStudent(data: { rollNumber: string; name: string; classId: string; email?: string }) {
   await connectDB();
-  return Student.create(data);
+  const rollNumber = data.rollNumber.trim().toUpperCase();
+  const existing = await Student.findOne({ rollNumber }).lean();
+  if (existing) throw new ApiError(409, "Roll number is already assigned to another student");
+
+  let email = (data.email || "").trim().toLowerCase();
+  if (email) {
+    const emailTaken = await User.findOne({ email }).lean();
+    if (emailTaken) throw new ApiError(409, "Email is already in use");
+  } else {
+    email = generateEmail(data.name, rollNumber);
+    let counter = 1;
+    while (await User.findOne({ email }).lean()) {
+      const first = data.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+      const suffix = rollNumber.replace(/[^0-9]/g, "").slice(-3);
+      email = `${first}${counter}${suffix}@${EMAIL_DOMAIN}`;
+      counter++;
+    }
+  }
+
+  const passwordHash = await bcrypt.hash(INITIAL_STUDENT_PASSWORD, 10);
+  const user = await User.create({
+    name: data.name.trim(),
+    email,
+    passwordHash,
+    role: "student",
+    mustChangePassword: true,
+  });
+
+  const student = await Student.create({
+    ...data,
+    name: data.name.trim(),
+    rollNumber,
+    email,
+    userId: String(user._id),
+  });
+  return { ...student.toObject(), email, initialPassword: INITIAL_STUDENT_PASSWORD };
 }
 
 export async function updateStudent(id: string, data: { rollNumber?: string; name?: string; classId?: string }) {
@@ -60,10 +105,7 @@ export async function deleteStudent(id: string) {
   });
 }
 
-const BULK_IMPORT_MAX_ROWS = 1000;
-export const INITIAL_STUDENT_PASSWORD = "Student@123";
-
-export async function bulkImportStudents(classId: string, students: { rollNumber: string; name: string }[]) {
+export async function bulkImportStudents(classId: string, students: { rollNumber: string; name: string; email?: string }[]) {
   await connectDB();
   if (students.length > BULK_IMPORT_MAX_ROWS) {
     throw new ApiError(400, `Bulk import is limited to ${BULK_IMPORT_MAX_ROWS} rows per request`);
@@ -72,7 +114,6 @@ export async function bulkImportStudents(classId: string, students: { rollNumber
   const cls = await Class.findOne({ _id: classId }).lean();
   if (!cls) throw new ApiError(404, "Class not found");
 
-  const { User } = await import("@/models");
   const passwordHash = await bcrypt.hash(INITIAL_STUDENT_PASSWORD, 10);
 
   let created = 0;
@@ -81,23 +122,40 @@ export async function bulkImportStudents(classId: string, students: { rollNumber
 
   for (const s of students) {
     try {
-      const existingUser = await User.findOne({ email: `${s.rollNumber.toLowerCase()}@student.tms.local` }).lean();
+      const rollNumber = s.rollNumber.trim().toUpperCase();
+      const duplicateStudent = await Student.findOne({ rollNumber }).lean();
+      if (duplicateStudent) {
+        skipped++;
+        skippedDetails.push(s.rollNumber);
+        continue;
+      }
 
-      const user =
-        existingUser ??
-        (await User.create({
-          name: s.name,
-          email: `${s.rollNumber.toLowerCase()}@student.tms.local`,
-          passwordHash,
-          role: "student",
-        }));
+      let email = (s.email || "").trim().toLowerCase();
+      if (!email) {
+        email = generateEmail(s.name, rollNumber);
+        let counter = 1;
+        while (await User.findOne({ email }).lean()) {
+          const first = s.name.split(" ")[0].toLowerCase().replace(/[^a-z]/g, "");
+          const suffix = rollNumber.replace(/[^0-9]/g, "").slice(-3);
+          email = `${first}${counter}${suffix}@${EMAIL_DOMAIN}`;
+          counter++;
+        }
+      }
+
+      const user = await User.create({
+        name: s.name,
+        email,
+        passwordHash,
+        role: "student",
+        mustChangePassword: true,
+      });
 
       await Student.create({
-        rollNumber: s.rollNumber,
+        rollNumber,
         name: s.name,
         classId,
         userId: String(user._id),
-        email: user.email,
+        email,
       });
       created++;
     } catch (error) {
