@@ -89,7 +89,7 @@ export default function StudentProfilePage() {
                   <Badge variant="secondary" className="font-mono text-xs">
                     {rollNumber}
                   </Badge>
-                  <Badge variant="default" className="gap-1 bg-primary text-primary-foreground">
+                  <Badge className="gap-1 bg-gradient-to-r from-black via-zinc-800 to-zinc-700 text-white border border-zinc-700/80 shadow-xs">
                     <GraduationCap className="h-3 w-3" />
                     Student
                   </Badge>

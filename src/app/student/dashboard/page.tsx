@@ -139,22 +139,24 @@ export default function StudentDashboard() {
     <StudentShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="page-stack">
         {/* Welcome banner */}
-        <div className="gradient-primary flex flex-col gap-2 rounded-xl p-4 text-white shadow-md md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-black via-zinc-900 to-zinc-800 p-5 text-white shadow-md border border-zinc-800/80 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
-            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold backdrop-blur">
-              <GraduationCap size={16} />
-              <span>Course Enrollment</span>
+            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-zinc-800 to-zinc-700 px-2.5 py-0.5 text-xs font-semibold text-zinc-200 border border-zinc-600/40 shadow-xs">
+              <GraduationCap size={15} />
+              <span>Student Portal</span>
             </div>
-            <h2 className="text-xl font-medium tracking-tight sm:text-2xl">Welcome back, {name}!</h2>
-            <p className="mt-1 text-xs text-white/90">
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl text-white">
+              Welcome back, <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">{name}</span>!
+            </h2>
+            <p className="mt-1 text-xs text-zinc-300">
               {className} &middot; Roll #{profile?.rollNumber} &middot; {department || `Batch ${batch}`}
             </p>
           </div>
           <Link
             href="/student/assignments"
-            className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-white px-3 text-xs font-medium text-primary shadow-sm hover:bg-muted"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-white px-3.5 text-xs font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-100 hover:shadow"
           >
-            View My Assignments <ArrowRight size={16} />
+            View My Assignments <ArrowRight size={15} />
           </Link>
         </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn, getInitials } from "@/lib/utils";
@@ -16,7 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { STUDENT_NAV_ITEMS } from "@/components/layout/student-sidebar";
-import { LogOut, Lock, ChevronRight, UserIcon } from "lucide-react";
+import { LogOut, Lock, ChevronRight, ChevronLeft, UserIcon } from "lucide-react";
 
 interface StudentShellProps {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ export function StudentShell({ children, user }: StudentShellProps) {
   const title = current?.label ?? "Dashboard";
   const name = user.name || "Student";
   const email = user.email || "";
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: "/login" });
@@ -40,10 +42,24 @@ export function StudentShell({ children, user }: StudentShellProps) {
 
   return (
     <div className="flex h-screen max-w-full flex-col overflow-hidden bg-background md:flex-row">
-      <aside className="hidden shrink-0 md:block">
+      <aside
+        className={cn(
+          "hidden shrink-0 md:block transition-all duration-300 ease-in-out relative border-r border-border bg-card",
+          collapsed ? "w-[68px]" : "w-[200px]"
+        )}
+      >
+        {/* Toggle Collapse Button on border edge */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="absolute -right-3 top-4 z-20 hidden md:flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card shadow-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        </button>
+
         {/* Desktop sidebar */}
-        <div className="h-screen">
-          <SidebarDesktop name={name} email={email} onSignOut={handleSignOut} />
+        <div className="h-screen flex flex-col">
+          <SidebarDesktop name={name} email={email} collapsed={collapsed} onSignOut={handleSignOut} />
         </div>
       </aside>
 
@@ -92,28 +108,47 @@ export function StudentShell({ children, user }: StudentShellProps) {
   );
 }
 
-function SidebarDesktop({ name, email, onSignOut }: { name: string; email: string; onSignOut: () => void }) {
+function SidebarDesktop({
+  name,
+  email,
+  collapsed,
+  onSignOut,
+}: {
+  name: string;
+  email: string;
+  collapsed: boolean;
+  onSignOut: () => void;
+}) {
   return (
-    <div className="flex h-full w-[200px] flex-col border-r border-border bg-card">
-      <div className="flex h-16 shrink-0 items-center border-b border-border px-5">
-        <Logo />
+    <div className="flex h-full w-full flex-col bg-card">
+      <div className={cn("flex h-16 shrink-0 items-center border-b border-border", collapsed ? "justify-center px-2" : "px-5")}>
+        <Logo collapsed={collapsed} />
       </div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Portal</p>
-        <DesktopNav />
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+        {!collapsed && (
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Portal</p>
+        )}
+        <DesktopNav collapsed={collapsed} />
       </nav>
-      <div className="shrink-0 border-t border-border p-3">
+      <div className="shrink-0 border-t border-border p-2">
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:border-primary/30">
-            <Avatar className="h-9 w-9 text-sm">
+          <DropdownMenuTrigger
+            className={cn(
+              "flex w-full items-center gap-2 rounded-lg border border-border bg-card p-2 text-left transition-colors hover:border-primary/30",
+              collapsed && "justify-center p-1.5"
+            )}
+          >
+            <Avatar className="h-8 w-8 text-xs shrink-0">
               <AvatarFallback className="bg-muted text-primary font-semibold">
                 {getInitials(name)}
               </AvatarFallback>
             </Avatar>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium text-card-foreground">{name}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{email}</span>
-            </span>
+            {!collapsed && (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium text-card-foreground">{name}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{email}</span>
+              </span>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56 p-1.5" align="end" side="right" sideOffset={12}>
             <DropdownMenuGroup>
@@ -156,7 +191,7 @@ function SidebarDesktop({ name, email, onSignOut }: { name: string; email: strin
   );
 }
 
-function DesktopNav() {
+function DesktopNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname();
   return (
     <>
@@ -167,15 +202,17 @@ function DesktopNav() {
           <a
             key={item.href}
             href={item.href}
+            title={collapsed ? item.label : undefined}
             className={cn(
-              "flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm transition-colors",
+              "flex min-h-10 items-center gap-2 rounded-lg px-2.5 text-sm transition-colors",
+              collapsed && "justify-center px-0",
               active
-                ? "bg-primary/10 font-semibold text-primary"
-                : "font-medium text-muted-foreground hover:bg-muted hover:text-card-foreground"
+                ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                : "font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            <Icon size={20} strokeWidth={1.8} className="shrink-0" />
-            <span className="min-w-0 truncate">{item.label}</span>
+            <Icon size={18} strokeWidth={active ? 2.2 : 1.8} className="shrink-0" />
+            {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
           </a>
         );
       })}
