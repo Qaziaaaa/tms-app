@@ -154,11 +154,12 @@ export default function ClassesPage() {
             onChange={setSearch}
             placeholder="Search classes..."
             delay={200}
+            className="w-full sm:max-w-xs"
           />
           <select
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
-            className="h-10 rounded-lg border border-input bg-background px-3 text-sm"
+            className="h-10 w-full sm:w-auto rounded-lg border border-input bg-background px-3 text-sm"
           >
             <option value="">All Departments</option>
             {departments.map((d) => (
@@ -166,17 +167,17 @@ export default function ClassesPage() {
             ))}
           </select>
           {!loading && (
-            <span className="text-sm text-muted-foreground sm:ml-auto">
+            <span className="text-xs sm:text-sm text-muted-foreground sm:ml-auto">
               {filteredClasses.length} class{filteredClasses.length !== 1 ? "es" : ""}
             </span>
           )}
-          <Button onClick={openCreate} className="shadow-md sm:ml-auto">
+          <Button onClick={openCreate} className="shadow-md w-full sm:w-auto sm:ml-auto">
             <Plus className="mr-2 h-4 w-4" /> Add Class
           </Button>
         </div>
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40" />)}
           </div>
           ) : filteredClasses.length === 0 ? (
@@ -186,7 +187,7 @@ export default function ClassesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredClasses.map((cls) => (
               <Card key={cls.id} className="card-shadow card-hover group cursor-pointer" onClick={() => router.push(`/classes/${cls.id}`)}>
                 <CardHeader className="pb-3">

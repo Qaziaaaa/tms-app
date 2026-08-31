@@ -224,23 +224,23 @@ export default function AssignmentsPage() {
             delay={200}
             className="w-full sm:max-w-xs"
           />
-          <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
+          <Button onClick={openCreate} disabled={!selectedClassId} className="w-full sm:w-auto sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> New Assignment</Button>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <Card className="card-shadow h-full">
               <CardHeader className="border-b bg-muted/60 py-3">
-                <CardTitle className="text-lg flex items-center justify-between">
+                <CardTitle className="text-base sm:text-lg flex items-center justify-between">
                   Assignments
                   {!loadingAssignments && (
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                       {search.trim() ? `${filteredAssignments.length} of ${assignments.length}` : assignments.length}
                     </span>
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="max-h-[560px] space-y-2 overflow-auto py-3">
+              <CardContent className="max-h-[350px] sm:max-h-[560px] space-y-2 overflow-auto py-3">
                 {loadingAssignments ? (
                   Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16" />)
                 ) : filteredAssignments.length === 0 ? (
@@ -269,16 +269,16 @@ export default function AssignmentsPage() {
           <div className="lg:col-span-2">
             <Card className="card-shadow">
               <CardHeader className="border-b bg-muted/60 py-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{activeAssignment ? activeAssignment.title : "Select an assignment"}</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-base sm:text-lg truncate">{activeAssignment ? activeAssignment.title : "Select an assignment"}</CardTitle>
                   {activeAssignment && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
                       {awaitingReviewCount > 0 && (
                         <span className="rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
                           {awaitingReviewCount} awaiting review
                         </span>
                       )}
-                      <Button onClick={saveSubmissions} disabled={subSaving}>{subSaving ? "Saving..." : "Save Submissions"}</Button>
+                      <Button size="sm" onClick={saveSubmissions} disabled={subSaving} className="text-xs">{subSaving ? "Saving..." : "Save Submissions"}</Button>
                     </div>
                   )}
                 </div>
@@ -289,8 +289,8 @@ export default function AssignmentsPage() {
                 ) : submissions.length === 0 ? (
                   <p className="py-12 text-center text-muted-foreground">No students in this class.</p>
                 ) : (
-                  <div className="max-h-[400px] overflow-auto">
-                    <Table>
+                  <div className="max-h-[400px] overflow-x-auto overflow-y-auto">
+                    <Table className="min-w-[500px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Roll</TableHead>
@@ -418,7 +418,7 @@ export default function AssignmentsPage() {
               <Label>Description (optional)</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Assignment details..." rows={3} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
                 <Label>Due Date</Label>
                 <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />

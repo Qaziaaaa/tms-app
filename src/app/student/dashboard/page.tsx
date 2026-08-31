@@ -154,7 +154,7 @@ export default function StudentDashboard() {
           </div>
           <Link
             href="/student/assignments"
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-white px-3.5 text-xs font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-100 hover:shadow"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-white px-3.5 text-xs font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-100 hover:shadow w-full sm:w-auto"
           >
             View My Assignments <ArrowRight size={15} />
           </Link>
@@ -169,7 +169,7 @@ export default function StudentDashboard() {
           <>
             {/* Metric cards + schedule widget */}
             <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
                 {loading ? (
                   Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)
                 ) : (
@@ -209,24 +209,24 @@ export default function StudentDashboard() {
 
               {/* Class schedule widget */}
               <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
-                <div className="px-2 pb-1.5 pt-2">
-                  <h3 className="flex items-center gap-1 text-base font-semibold text-card-foreground">
+                <div className="px-3 pb-1.5 pt-2.5">
+                  <h3 className="flex items-center gap-1.5 text-sm sm:text-base font-semibold text-card-foreground">
                     <CalendarDays size={18} /> Class Schedule
                   </h3>
                 </div>
                 <div className="px-2 pb-2">
-                  <div className="grid grid-cols-7 gap-1">
+                  <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
                     {week.map((day) => {
                       const active = ACTIVE_DAYS.includes(day.name);
                       return (
                         <div
                           key={day.name}
-                          className={`flex flex-col items-center justify-center rounded-md border p-1 ${
+                          className={`flex flex-col items-center justify-center rounded-md border p-0.5 sm:p-1 ${
                             active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"
                           }`}
                         >
-                          <span className={active ? "text-[11px] font-semibold" : "text-[11px] font-medium"}>{day.name}</span>
-                          <span className={`mt-0.5 text-sm ${active ? "font-bold" : "font-medium"}`}>{day.date}</span>
+                          <span className={active ? "text-[9px] sm:text-[11px] font-semibold" : "text-[9px] sm:text-[11px] font-medium"}>{day.name}</span>
+                          <span className={`mt-0.5 text-xs sm:text-sm ${active ? "font-bold" : "font-medium"}`}>{day.date}</span>
                         </div>
                       );
                     })}

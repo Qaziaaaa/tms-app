@@ -31,7 +31,7 @@ const ROUTE_TITLES: Record<string, string> = {
 
 interface HeaderProps {
   user: { name: string; email: string };
-  onMenuClick: () => void;
+  onMenuClick?: () => void;
 }
 
 function todayLabel() {
@@ -42,7 +42,7 @@ function todayLabel() {
   });
 }
 
-export function Header({ user, onMenuClick }: HeaderProps) {
+export function Header({ user }: HeaderProps) {
   const pathname = usePathname();
   const matchedKey = Object.keys(ROUTE_TITLES).find(
     (key) => pathname === key || pathname.startsWith(`${key}/`)
@@ -50,25 +50,20 @@ export function Header({ user, onMenuClick }: HeaderProps) {
   const title = matchedKey ? ROUTE_TITLES[matchedKey] : "Dashboard";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 backdrop-blur-sm px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center justify-between gap-3 border-b border-border bg-card/80 backdrop-blur-sm px-4 sm:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2" onClick={onMenuClick}>
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="whitespace-nowrap text-sm font-medium text-muted-foreground">Home</span>
-          <ChevronRight size={14} className="text-muted-foreground" />
-          <span className="truncate text-sm font-semibold text-card-foreground">{title}</span>
+          <span className="whitespace-nowrap text-xs sm:text-sm font-medium text-muted-foreground">Home</span>
+          <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+          <span className="truncate text-xs sm:text-sm font-semibold text-card-foreground">{title}</span>
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="text-xs font-medium text-muted-foreground">{todayLabel()}</span>
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <span className="hidden text-xs font-medium text-muted-foreground sm:inline-block">{todayLabel()}</span>
         <div className="lg:hidden">
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex items-center justify-center rounded-full">
+            <DropdownMenuTrigger className="flex h-9 w-9 items-center justify-center rounded-full transition-transform active:scale-95">
               <Avatar className="h-8 w-8 text-xs ring-2 ring-border/50">
                 <AvatarFallback className="bg-muted text-primary font-bold">
                   {getInitials(user.name)}

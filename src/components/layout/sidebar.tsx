@@ -31,6 +31,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -44,62 +45,50 @@ const navItems = [
 ];
 
 interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   user?: { name: string; email: string };
 }
 
-export function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse, user }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, user }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity lg:hidden"
-          onClick={onClose}
-        />
+    <aside
+      className={cn(
+        "hidden lg:flex fixed left-0 top-0 z-50 h-full bg-card border-r border-border transition-all duration-300 ease-in-out flex-col",
+        collapsed ? "w-[68px]" : "w-[220px]"
+      )}
+      style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.04)" }}
+    >
+      {/* Toggle Collapse Button on border edge */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="absolute -right-3 top-4 z-20 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card shadow-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        </button>
       )}
 
-      <aside
-        data-open={isOpen ? "true" : "false"}
-        className={cn(
-          "fixed left-0 top-0 z-50 h-full bg-card border-r border-border transition-all duration-300 ease-in-out flex flex-col",
-          collapsed ? "w-[68px]" : "w-[220px]",
-          "max-lg:-translate-x-full",
-          "max-lg:data-[open=true]:translate-x-0",
-          "lg:!translate-x-0"
-        )}
-        style={{ boxShadow: "4px 0 24px rgba(0,0,0,0.04)" }}
-      >
-        {/* Toggle Collapse Button on border edge */}
-        {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="absolute -right-3 top-4 z-20 hidden lg:flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card shadow-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
-          </button>
-        )}
-
-        <div className={cn("flex h-14 items-center border-b border-border", collapsed ? "justify-center px-2" : "px-4")}>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary p-1.5 shrink-0">
-              <GraduationCap className="h-4 w-4 text-primary-foreground" />
-            </div>
-            {!collapsed && (
-              <span className="text-base font-bold tracking-tight truncate">{APP_NAME}</span>
-            )}
-          </Link>
-        </div>
-
-        <nav className="flex-1 space-y-0.5 p-2">
+      <div className={cn("flex h-14 items-center justify-between border-b border-border", collapsed ? "justify-center px-2" : "px-4")}>
+        <Link href="/dashboard" className="flex items-center gap-2">
+          <div className="rounded-lg bg-primary p-1.5 shrink-0">
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
+          </div>
           {!collapsed && (
-            <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Menu
+            <span className="text-base font-bold tracking-tight truncate">{APP_NAME}</span>
+          )}
+        </Link>
+      </div>
+
+      <nav className="flex-1 space-y-0.5 p-2">
+        {!collapsed && (
+          <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Menu
             </p>
           )}
           {navItems.map((item) => {
@@ -108,7 +97,6 @@ export function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse, 
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={onClose}
                 title={collapsed ? item.label : undefined}
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-all duration-150",
@@ -185,6 +173,5 @@ export function Sidebar({ isOpen, onClose, collapsed = false, onToggleCollapse, 
           </div>
         )}
       </aside>
-    </>
   );
 }
