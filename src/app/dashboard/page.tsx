@@ -62,21 +62,21 @@ export default function DashboardPage() {
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="page-stack">
-        <div className="flex flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-start">
+        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start">
           <div>
-            <h1 className="page-title">
+            <h1 className="page-title text-xl sm:text-2xl">
               Welcome back, {session.user.name?.split(" ")[0] || "Teacher"}
             </h1>
-            <p className="page-description">
+            <p className="page-description text-xs sm:text-sm">
               Real-time class performance, attendance rates, and student activity.
             </p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button variant="default" size="sm" className="h-9" onClick={() => setAttendanceOpen(true)}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="default" size="sm" className="h-9 flex-1 sm:flex-none" onClick={() => setAttendanceOpen(true)}>
               <ClipboardCheck className="mr-1.5 h-4 w-4" /> Take Attendance
             </Button>
-            <Link href="/classes">
-              <Button variant="outline" size="sm" className="h-9">
+            <Link href="/classes" className="flex-1 sm:flex-none">
+              <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
                 <Plus className="mr-1.5 h-4 w-4" /> New Class
               </Button>
             </Link>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <>
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               {loading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="rounded-lg border bg-card p-4 shadow-sm">

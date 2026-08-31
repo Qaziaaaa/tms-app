@@ -95,16 +95,16 @@ export default function ReportsPage() {
               {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
             </select>
           )}
-          <div className="flex rounded-lg border border-input overflow-hidden">
+          <div className="flex rounded-lg border border-input overflow-hidden w-full sm:w-auto">
             <button
               onClick={() => { setReportData([]); setReportType("attendance"); setSearch(""); }}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${reportType === "attendance" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+              className={`flex-1 sm:flex-none px-4 py-2 text-sm font-medium transition-colors text-center ${reportType === "attendance" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
             >
               Attendance
             </button>
             <button
               onClick={() => { setReportData([]); setReportType("submissions"); setSearch(""); }}
-              className={`px-4 py-2 text-sm font-medium transition-colors ${reportType === "submissions" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
+              className={`flex-1 sm:flex-none px-4 py-2 text-sm font-medium transition-colors text-center ${reportType === "submissions" ? "bg-primary text-primary-foreground" : "bg-background hover:bg-accent"}`}
             >
               Submissions
             </button>
@@ -122,10 +122,10 @@ export default function ReportsPage() {
 
         <Card className="card-shadow">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center justify-between">
+            <CardTitle className="text-base sm:text-lg flex items-center justify-between">
               {reportType === "attendance" ? "Attendance Report" : "Submissions Report"}
               {!loadingReport && reportData.length > 0 && (
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                   {search.trim() ? `${filteredData.length} of ${reportData.length}` : `${reportData.length} students`}
                 </span>
               )}
@@ -139,8 +139,8 @@ export default function ReportsPage() {
                 {reportData.length === 0 ? "No data available for this class." : "No students match your search."}
               </p>
             ) : reportType === "attendance" ? (
-              <div className="max-h-[500px] overflow-auto">
-                <Table>
+              <div className="max-h-[500px] overflow-x-auto overflow-y-auto">
+                <Table className="min-w-[480px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Roll</TableHead>
@@ -164,8 +164,8 @@ export default function ReportsPage() {
                 </Table>
               </div>
             ) : (
-              <div className="max-h-[500px] overflow-auto">
-                <Table>
+              <div className="max-h-[500px] overflow-x-auto overflow-y-auto">
+                <Table className="min-w-[480px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Roll</TableHead>

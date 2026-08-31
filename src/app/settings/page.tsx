@@ -64,7 +64,7 @@ export default function SettingsPage() {
             <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">Manage your account security and preferences.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => router.push("/profile")}>
+          <Button variant="outline" size="sm" onClick={() => router.push("/profile")} className="w-full sm:w-auto">
             View Full Profile
           </Button>
         </div>
@@ -113,7 +113,7 @@ export default function SettingsPage() {
                   {message.text}
                 </p>
               )}
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading ? "Changing..." : "Change Password"}
               </Button>
             </form>

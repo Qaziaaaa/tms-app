@@ -194,16 +194,16 @@ function AttendanceContent() {
               {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
             </select>
           )}
-          <Button onClick={createSession} disabled={!selectedClassId} className="sm:ml-auto">
+          <Button onClick={createSession} disabled={!selectedClassId} className="w-full sm:w-auto sm:ml-auto">
             <Plus className="mr-2 h-4 w-4" /> New Session
           </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <Card className="card-shadow">
-              <CardHeader><CardTitle className="text-lg">Sessions</CardTitle></CardHeader>
-              <CardContent className="space-y-2 max-h-[500px] overflow-auto">
+              <CardHeader><CardTitle className="text-base sm:text-lg">Sessions</CardTitle></CardHeader>
+              <CardContent className="space-y-2 max-h-[300px] sm:max-h-[500px] overflow-auto">
                 {loadingSessions ? (
                   Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14" />)
                 ) : sessions.length === 0 ? (
@@ -234,26 +234,26 @@ function AttendanceContent() {
           <div className="lg:col-span-2">
             <Card className="card-shadow">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2">
+                  <CardTitle className="text-base sm:text-lg truncate">
                     {activeSession
-                      ? new Date(activeSession.date).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+                      ? new Date(activeSession.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
                       : "Select a session"}
                   </CardTitle>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <div className={`hidden items-center gap-3 text-xs text-muted-foreground sm:flex ${!activeSession ? "invisible" : ""}`}>
                       <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-green-500" /> {presentCount}P</span>
                       <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-red-500" /> {absentCount}A</span>
                       <span>{markedCount}/{students.length} marked</span>
                     </div>
                     <div className={`hidden h-4 w-px bg-border sm:block ${!activeSession ? "invisible" : ""}`} />
-                    <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")} disabled={!activeSession}>
-                      <CheckCircle2 className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">All Present</span>
+                    <Button size="sm" variant="outline" className="text-xs px-2.5 h-8" onClick={() => markAll("PRESENT")} disabled={!activeSession}>
+                      <CheckCircle2 className="h-3 w-3 sm:mr-1" /> <span className="inline">All Present</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")} disabled={!activeSession}>
-                      <XCircle className="h-3 w-3 sm:mr-1" /> <span className="hidden sm:inline">All Absent</span>
+                    <Button size="sm" variant="outline" className="text-xs px-2.5 h-8" onClick={() => markAll("ABSENT")} disabled={!activeSession}>
+                      <XCircle className="h-3 w-3 sm:mr-1" /> <span className="inline">All Absent</span>
                     </Button>
-                    <Button size="sm" onClick={saveAttendance} disabled={!activeSession || saving || markedCount === 0}>
+                    <Button size="sm" className="text-xs px-2.5 h-8" onClick={saveAttendance} disabled={!activeSession || saving || markedCount === 0}>
                       {saving ? "Saving..." : <span className="sm:hidden">Save</span>}
                       {!saving && <span className="hidden sm:inline">Save Attendance</span>}
                     </Button>
@@ -283,13 +283,13 @@ function AttendanceContent() {
                         delay={200}
                         className="w-full sm:max-w-xs"
                       />
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap gap-1">
                         {(["ALL", "UNMARKED", "PRESENT", "ABSENT"] as const).map((f) => (
                           <Button
                             key={f}
                             size="sm"
                             variant={statusFilter === f ? "default" : "outline"}
-                            className={`h-7 text-xs ${statusFilter === f ? "" : "text-muted-foreground"}`}
+                            className={`h-7 text-xs px-2.5 ${statusFilter === f ? "" : "text-muted-foreground"}`}
                             onClick={() => setStatusFilter(f)}
                           >
                             {f === "ALL" ? "All" : f === "UNMARKED" ? "Unmarked" : f === "PRESENT" ? "Present" : "Absent"}

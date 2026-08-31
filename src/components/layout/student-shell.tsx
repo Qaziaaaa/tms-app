@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn, getInitials } from "@/lib/utils";
@@ -71,35 +72,35 @@ export function StudentShell({ children, user }: StudentShellProps) {
             <span className="truncate text-sm font-semibold text-card-foreground">{title}</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-xs font-medium text-muted-foreground md:block">{todayLabel()}</span>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <span className="hidden text-xs font-medium text-muted-foreground sm:block">{todayLabel()}</span>
             <div className="md:hidden">
               <MobileMenu name={name} email={email} onSignOut={handleSignOut} />
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 pb-20 sm:p-4 sm:pb-20 md:p-6 md:pb-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 pb-24 sm:p-4 sm:pb-24 md:p-6 md:pb-6">
           <div className="mx-auto w-full max-w-[1440px]">{children}</div>
         </div>
 
         {/* Mobile bottom nav */}
-        <nav className="grid shrink-0 grid-cols-5 border-t border-border bg-card shadow-[0_-2px_10px_rgba(0,0,0,0.08)] md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t border-border bg-card/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.06)] md:hidden">
           {STUDENT_NAV_ITEMS.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 py-2 text-[10px] transition-colors",
-                  active ? "font-semibold text-primary" : "text-muted-foreground"
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-[10px] transition-colors min-h-[52px]",
+                  active ? "font-semibold text-primary" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Icon size={18} />
-                {item.label}
-              </a>
+                <Icon size={17} strokeWidth={active ? 2.3 : 1.8} className="shrink-0" />
+                <span className="truncate max-w-full text-[9.5px] sm:text-[10px] leading-tight">{item.label}</span>
+              </Link>
             );
           })}
         </nav>
@@ -199,7 +200,7 @@ function DesktopNav({ collapsed }: { collapsed: boolean }) {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
-          <a
+          <Link
             key={item.href}
             href={item.href}
             title={collapsed ? item.label : undefined}
@@ -213,7 +214,7 @@ function DesktopNav({ collapsed }: { collapsed: boolean }) {
           >
             <Icon size={18} strokeWidth={active ? 2.2 : 1.8} className="shrink-0" />
             {!collapsed && <span className="min-w-0 truncate">{item.label}</span>}
-          </a>
+          </Link>
         );
       })}
     </>

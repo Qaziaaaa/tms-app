@@ -149,13 +149,13 @@ export default function InsightsPage() {
           <p className="text-muted-foreground mt-0.5 ml-8">AI-powered class performance analysis with student categorization</p>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           {loading ? <Skeleton className="h-10 w-64" /> : (
-            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
+            <select value={selectedClassId} onChange={(e) => setSelectedClassId(e.target.value)} className="w-full sm:w-auto rounded-md border border-input bg-background px-3 py-2 text-sm">
               {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.department}</option>)}
             </select>
           )}
-          <Button onClick={fetchInsights} disabled={loadingInsights || !selectedClassId}>
+          <Button onClick={fetchInsights} disabled={loadingInsights || !selectedClassId} className="w-full sm:w-auto">
             {loadingInsights ? "Analyzing..." : "Refresh Analysis"}
           </Button>
         </div>
@@ -167,7 +167,7 @@ export default function InsightsPage() {
         ) : insights ? (
           <>
             {/* Stat cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="card-shadow card-hover">
                 <CardContent className="flex items-center gap-3 p-4">
                   <div className="rounded-xl bg-green-500/10 p-3">
@@ -263,8 +263,8 @@ export default function InsightsPage() {
               </CardHeader>
               {showDetails && (
                 <CardContent>
-                  <div className="max-h-[500px] overflow-auto">
-                    <Table>
+                  <div className="max-h-[500px] overflow-x-auto overflow-y-auto">
+                    <Table className="min-w-[640px]">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Roll</TableHead>

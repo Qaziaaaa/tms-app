@@ -75,17 +75,17 @@ export default function StudentProfilePage() {
         </div>
 
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 ring-4 ring-primary/10">
-                <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+        <div className="relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-4 ring-primary/10 shrink-0">
+                <AvatarFallback className="text-xl sm:text-2xl font-bold bg-primary/10 text-primary">
                   {getInitials(name)}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-bold tracking-tight text-card-foreground">{name}</h3>
+              <div className="space-y-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h3 className="text-lg sm:text-xl font-bold tracking-tight text-card-foreground truncate">{name}</h3>
                   <Badge variant="secondary" className="font-mono text-xs">
                     {rollNumber}
                   </Badge>
@@ -94,20 +94,20 @@ export default function StudentProfilePage() {
                     Student
                   </Badge>
                 </div>
-                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" />
-                  {email}
+                <p className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground truncate">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{email}</span>
                 </p>
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5" />
+                <p className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5 shrink-0" />
                   Enrolled since {joinedDate}
                 </p>
               </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Link href="/student/password">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Link href="/student/password" className="w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="gap-1.5 text-xs w-full sm:w-auto">
                   <KeyRound className="h-3.5 w-3.5" />
                   Change Password
                 </Button>
@@ -173,7 +173,7 @@ export default function StudentProfilePage() {
               <CardDescription>Details regarding your class enrollment and student record.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/40 p-4 border border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 rounded-lg bg-muted/40 p-4 border border-border">
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Student Name</p>
                   <p className="mt-1 text-sm font-medium text-card-foreground">{name}</p>

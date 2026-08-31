@@ -179,7 +179,7 @@ export default function StudentAssignments() {
               )}
             </div>
             {nextAction && (
-              <Button size="sm" onClick={() => { setTurnInId(nextAction.id); setLink(""); setNote(""); }}>
+              <Button size="sm" onClick={() => { setTurnInId(nextAction.id); setLink(""); setNote(""); }} className="w-full sm:w-auto">
                 <Send className="mr-1.5 h-4 w-4" /> Turn in now
               </Button>
             )}

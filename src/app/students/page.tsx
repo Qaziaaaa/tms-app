@@ -224,10 +224,10 @@ export default function StudentsPage() {
             delay={200}
             className="w-full sm:max-w-xs"
           />
-          <Button onClick={openCreate} disabled={!selectedClassId} className="sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
+          <Button onClick={openCreate} disabled={!selectedClassId} className="w-full sm:w-auto sm:ml-auto"><Plus className="mr-2 h-4 w-4" /> Add Student</Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card className="card-shadow">
               <CardHeader>

@@ -137,7 +137,7 @@ export default function StudentGrades() {
               <div className="surface-header">
                 <h3 className="text-base font-semibold text-card-foreground">Grade Distribution</h3>
               </div>
-              <div className="flex items-center gap-6 p-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 sm:gap-6 p-3">
                 <ChartContainer config={distributionConfig} className="h-[190px] w-[190px]">
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>

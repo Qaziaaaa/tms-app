@@ -193,27 +193,27 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-lg font-semibold">Mark Attendance</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground mt-1">
+      <DialogContent className="w-[96vw] max-w-3xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b">
+          <DialogTitle className="text-base sm:text-lg font-semibold">Mark Attendance</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
             Update daily student attendance records
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 space-y-3 sm:space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <select
               value={selectedClassId}
               onChange={(e) => setSelectedClassId(e.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 w-full sm:w-auto rounded-md border border-input bg-background px-3 text-sm"
             >
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} - {c.department}</option>
               ))}
             </select>
             {!sessionId && !loading && (
-              <Button size="sm" variant="outline" onClick={createSession} disabled={creating || !selectedClassId} className="h-9">
+              <Button size="sm" variant="outline" onClick={createSession} disabled={creating || !selectedClassId} className="h-9 w-full sm:w-auto">
                 {creating ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Plus className="mr-2 h-3.5 w-3.5" />}
                 Create Session
               </Button>
@@ -225,53 +225,55 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
               {Array.from({ length: 6 }).map((_, i) => (<Skeleton key={i} className="h-14" />))}
             </div>
           ) : !sessionId ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">No session for today. Create one to start marking attendance.</p>
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+              <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3" />
+              <p className="text-xs sm:text-sm text-muted-foreground">No session for today. Create one to start marking attendance.</p>
             </div>
           ) : students.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">No students in this class.</p>
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+              <Users className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3" />
+              <p className="text-xs sm:text-sm text-muted-foreground">No students in this class.</p>
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
                     placeholder="Search by name or roll..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm"
+                    className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-xs sm:text-sm"
                   />
                 </div>
-                <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")} className="h-9 whitespace-nowrap text-green-700 border-green-200 hover:bg-green-50">
-                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> All Present
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")} className="h-9 whitespace-nowrap text-red-600 border-red-200 hover:bg-red-50">
-                  <XCircle className="mr-1.5 h-3.5 w-3.5" /> All Absent
-                </Button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => markAll("PRESENT")} className="h-9 flex-1 sm:flex-none whitespace-nowrap text-xs text-green-700 border-green-200 hover:bg-green-50 px-2.5">
+                    <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> All Present
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => markAll("ABSENT")} className="h-9 flex-1 sm:flex-none whitespace-nowrap text-xs text-red-600 border-red-200 hover:bg-red-50 px-2.5">
+                    <XCircle className="mr-1 h-3.5 w-3.5" /> All Absent
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Badge variant="secondary" className="gap-1 text-xs">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
+                <Badge variant="secondary" className="gap-1 text-[11px] sm:text-xs">
                   <Users className="h-3 w-3" /> Total: {counts.total}
                 </Badge>
-                <Badge variant="secondary" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+                <Badge variant="secondary" className="gap-1 text-[11px] sm:text-xs bg-green-50 text-green-700 border-green-200">
                   <CheckCircle2 className="h-3 w-3" /> Present: {counts.present}
                 </Badge>
-                <Badge variant="secondary" className="gap-1 text-xs bg-red-50 text-red-700 border-red-200">
+                <Badge variant="secondary" className="gap-1 text-[11px] sm:text-xs bg-red-50 text-red-700 border-red-200">
                   <XCircle className="h-3 w-3" /> Absent: {counts.absent}
                 </Badge>
                 {counts.notMarked > 0 && (
-                  <Badge variant="outline" className="gap-1 text-xs">
+                  <Badge variant="outline" className="gap-1 text-[11px] sm:text-xs">
                     <AlertCircle className="h-3 w-3" /> Not Marked: {counts.notMarked}
                   </Badge>
                 )}
               </div>
 
-              <div className="max-h-[420px] min-h-[280px] overflow-y-auto rounded-lg border divide-y">
+              <div className="max-h-[380px] sm:max-h-[420px] min-h-[200px] overflow-y-auto rounded-lg border divide-y">
                 {filteredStudents.length === 0 ? (
                   <p className="py-12 text-center text-sm text-muted-foreground">No students match your search.</p>
                 ) : (
@@ -285,29 +287,29 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
                       <div
                         key={student.id}
                         className={cn(
-                          "flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 transition-colors duration-150",
+                          "flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-2 sm:py-2.5 transition-colors duration-150",
                           isPresent && "bg-green-50/50 hover:bg-green-50",
                           isAbsent && "bg-red-50/50 hover:bg-red-50",
                           isUnmarked && "hover:bg-muted/50"
                         )}
                       >
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                          <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] sm:text-xs font-semibold text-muted-foreground">
                             {student.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="truncate text-sm font-semibold">{student.name}</p>
-                              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                              <p className="truncate text-xs sm:text-sm font-semibold">{student.name}</p>
+                              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9.5px] sm:text-[10px] font-mono font-semibold text-muted-foreground">
                                 {student.rollNumber}
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 items-center gap-1.5">
+                        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5 ml-auto">
                           {isUnmarked && (
-                            <Badge variant="outline" className="text-[10px] mr-1 border-dashed text-muted-foreground">
+                            <Badge variant="outline" className="text-[9.5px] sm:text-[10px] mr-0.5 sm:mr-1 border-dashed text-muted-foreground hidden xs:inline-flex">
                               Not Marked
                             </Badge>
                           )}
@@ -315,7 +317,7 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
                             size="sm"
                             variant={isPresent ? "default" : "outline"}
                             className={cn(
-                              "h-8 min-w-[80px] text-xs font-semibold",
+                              "h-7 sm:h-8 min-w-[68px] sm:min-w-[80px] px-2 text-[11px] sm:text-xs font-semibold",
                               isPresent ? "bg-green-600 hover:bg-green-700 text-white" : "text-green-700 border-green-200 hover:bg-green-50"
                             )}
                             onClick={() => toggleStatus(student.id, "PRESENT")}
@@ -326,7 +328,7 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
                             size="sm"
                             variant={isAbsent ? "default" : "outline"}
                             className={cn(
-                              "h-8 min-w-[80px] text-xs font-semibold",
+                              "h-7 sm:h-8 min-w-[68px] sm:min-w-[80px] px-2 text-[11px] sm:text-xs font-semibold",
                               isAbsent ? "bg-red-600 hover:bg-red-700 text-white" : "text-red-600 border-red-200 hover:bg-red-50"
                             )}
                             onClick={() => toggleStatus(student.id, "ABSENT")}
@@ -344,15 +346,15 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
         </div>
 
         {sessionId && students.length > 0 && (
-          <DialogFooter className="px-6 py-3.5 border-t border-border bg-muted/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
+          <DialogFooter className="px-4 sm:px-6 py-3 border-t border-border bg-muted/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
+            <p className="text-xs text-muted-foreground text-center sm:text-left">
               <span className="font-semibold text-foreground">{counts.present + counts.absent}</span> of {counts.total} marked
             </p>
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={onClose} className="h-9 px-4">
+            <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+              <Button variant="outline" size="sm" onClick={onClose} className="h-9 px-4 flex-1 sm:flex-none">
                 Cancel
               </Button>
-              <Button size="sm" onClick={saveAttendance} disabled={saving} className="h-9 px-4 gap-1.5">
+              <Button size="sm" onClick={saveAttendance} disabled={saving} className="h-9 px-4 gap-1.5 flex-1 sm:flex-none">
                 {saving ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...

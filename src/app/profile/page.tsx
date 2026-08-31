@@ -280,7 +280,7 @@ export default function TeacherProfilePage() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={savingName || nameInput.trim() === profile?.name} className="gap-2">
+                <Button type="submit" disabled={savingName || nameInput.trim() === profile?.name} className="gap-2 w-full sm:w-auto">
                   <Save className="h-4 w-4" />
                   {savingName ? "Saving..." : "Save Changes"}
                 </Button>
@@ -384,7 +384,7 @@ export default function TeacherProfilePage() {
                   </div>
                 )}
 
-                <Button type="submit" disabled={changingPassword} variant="default">
+                <Button type="submit" disabled={changingPassword} variant="default" className="w-full sm:w-auto">
                   {changingPassword ? "Updating..." : "Update Password"}
                 </Button>
               </form>

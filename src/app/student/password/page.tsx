@@ -180,7 +180,7 @@ export default function StudentPassword() {
               )}
 
               <div className="sm:col-span-2">
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                   {loading ? "Saving..." : "Change Password"}
                 </Button>
               </div>
