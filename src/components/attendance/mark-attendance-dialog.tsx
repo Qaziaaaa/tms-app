@@ -344,14 +344,26 @@ export function MarkAttendanceDialog({ open, onClose, preselectedClassId, onSave
         </div>
 
         {sessionId && students.length > 0 && (
-          <DialogFooter>
-            <p className="text-xs text-muted-foreground mr-auto">
-              {counts.present + counts.absent} of {counts.total} marked
+          <DialogFooter className="px-6 py-3.5 border-t border-border bg-muted/40 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-semibold text-foreground">{counts.present + counts.absent}</span> of {counts.total} marked
             </p>
-            <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
-            <Button size="sm" onClick={saveAttendance} disabled={saving}>
-              {saving ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...</> : <><Check className="mr-1.5 h-3.5 w-3.5" /> Save Attendance</>}
-            </Button>
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={onClose} className="h-9 px-4">
+                Cancel
+              </Button>
+              <Button size="sm" onClick={saveAttendance} disabled={saving} className="h-9 px-4 gap-1.5">
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Save Attendance
+                  </>
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         )}
       </DialogContent>

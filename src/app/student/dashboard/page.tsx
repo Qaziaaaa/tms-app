@@ -36,12 +36,12 @@ import type {
 } from "@/types/api";
 
 const attendanceChartConfig = {
-  present: { label: "Present", color: "var(--clr-green)" },
-  absent: { label: "Absent", color: "var(--clr-red)" },
+  present: { label: "Present", color: "var(--chart-2)" },
+  absent: { label: "Absent", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
 const gradeChartConfig = {
-  percentage: { label: "Score %", color: "var(--clr-blue)" },
+  percentage: { label: "Score %", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 function currentWeek() {
@@ -114,9 +114,9 @@ export default function StudentDashboard() {
   }
 
   const name = profile?.name || session.user.name || "Student";
-  const batch = profile?.class.batch || "—";
-  const className = profile?.class.name || "—";
-  const department = profile?.class.department || "";
+  const batch = profile?.class?.batch || "—";
+  const className = profile?.class?.name || "—";
+  const department = profile?.class?.department || "";
 
   const summary = attendance?.summary;
   const present = summary?.present ?? 0;
@@ -139,22 +139,24 @@ export default function StudentDashboard() {
     <StudentShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="page-stack">
         {/* Welcome banner */}
-        <div className="gradient-primary flex flex-col gap-2 rounded-xl p-4 text-white shadow-md md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl bg-gradient-to-r from-black via-zinc-900 to-zinc-800 p-5 text-white shadow-md border border-zinc-800/80 md:flex-row md:items-center md:justify-between">
           <div className="min-w-0">
-            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold backdrop-blur">
-              <GraduationCap size={16} />
-              <span>Course Enrollment</span>
+            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-zinc-800 to-zinc-700 px-2.5 py-0.5 text-xs font-semibold text-zinc-200 border border-zinc-600/40 shadow-xs">
+              <GraduationCap size={15} />
+              <span>Student Portal</span>
             </div>
-            <h2 className="text-xl font-medium tracking-tight sm:text-2xl">Welcome back, {name}!</h2>
-            <p className="mt-1 text-xs text-white/90">
+            <h2 className="text-xl font-bold tracking-tight sm:text-2xl text-white">
+              Welcome back, <span className="bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">{name}</span>!
+            </h2>
+            <p className="mt-1 text-xs text-zinc-300">
               {className} &middot; Roll #{profile?.rollNumber} &middot; {department || `Batch ${batch}`}
             </p>
           </div>
           <Link
             href="/student/assignments"
-            className="inline-flex h-9 shrink-0 items-center gap-1 rounded-lg bg-white px-3 text-xs font-medium text-primary shadow-sm hover:bg-muted"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-white px-3.5 text-xs font-semibold text-zinc-900 shadow-sm transition-all hover:bg-zinc-100 hover:shadow"
           >
-            View My Assignments <ArrowRight size={16} />
+            View My Assignments <ArrowRight size={15} />
           </Link>
         </div>
 
@@ -247,12 +249,12 @@ export default function StudentDashboard() {
                     <div className="p-2.5">
                       <ChartContainer config={attendanceChartConfig} className="h-[220px] w-full">
                         <BarChart data={attendance.monthlyBreakdown}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 12 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="present" fill="var(--clr-green)" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="absent" fill="var(--clr-red)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="present" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="absent" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ChartContainer>
                     </div>
@@ -269,11 +271,11 @@ export default function StudentDashboard() {
                     <div className="p-2.5">
                       <ChartContainer config={gradeChartConfig} className="h-[220px] w-full">
                         <BarChart data={grades.gradeTrend}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                           <XAxis dataKey="title" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={50} />
                           <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="percentage" fill="var(--clr-blue)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="percentage" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ChartContainer>
                     </div>

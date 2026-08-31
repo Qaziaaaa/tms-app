@@ -2,19 +2,23 @@
 
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const dark = resolvedTheme === "dark";
 
   return (
-    <button
-      type="button"
+    <DropdownMenuItem
+      className={`cursor-pointer px-2 py-1.5 text-sm ${className || ""}`}
       onClick={() => setTheme(dark ? "light" : "dark")}
-      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:text-foreground cursor-pointer"
     >
-      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      {dark ? "Light Mode" : "Dark Mode"}
-    </button>
+      {dark ? (
+        <Sun className="mr-2 h-4 w-4 text-muted-foreground" />
+      ) : (
+        <Moon className="mr-2 h-4 w-4 text-muted-foreground" />
+      )}
+      <span>{dark ? "Light Mode" : "Dark Mode"}</span>
+    </DropdownMenuItem>
   );
 }

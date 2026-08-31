@@ -14,17 +14,17 @@ import { getStudentGrades } from "@/lib/api";
 import type { PortalGradesDTO } from "@/types/api";
 
 const barConfig = {
-  percentage: { label: "Score %", color: "var(--clr-blue)" },
+  percentage: { label: "Score %", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
-const PIE_COLORS = ["var(--clr-green)", "var(--clr-blue)", "var(--clr-amber)", "var(--clr-red)", "var(--clr-purple)"];
+const PIE_COLORS = ["var(--chart-2)", "var(--chart-1)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
 const distributionConfig = {
-  excellent: { label: "Excellent (80+)", color: "var(--clr-green)" },
-  good: { label: "Good (60-79)", color: "var(--clr-blue)" },
-  average: { label: "Average (40-59)", color: "var(--clr-amber)" },
-  below: { label: "Below (<40)", color: "var(--clr-red)" },
-  unscored: { label: "Not Submitted", color: "var(--clr-purple)" },
+  excellent: { label: "Excellent (80+)", color: "var(--chart-2)" },
+  good: { label: "Good (60-79)", color: "var(--chart-1)" },
+  average: { label: "Average (40-59)", color: "var(--chart-3)" },
+  below: { label: "Below (<40)", color: "var(--chart-4)" },
+  unscored: { label: "Not Submitted", color: "var(--chart-5)" },
 } satisfies ChartConfig;
 
 function getGradeBadge(percentage: number) {
@@ -85,30 +85,28 @@ export default function StudentGrades() {
                 label="Marks Obtained"
                 value={data?.summary.totalMarksObtained ?? 0}
                 subtitle={`out of ${data?.summary.totalPossibleMarks ?? 0}`}
-                subtitleColor="hsl(var(--clr-green))"
+                subtitleColor="var(--chart-2)"
                 icon={Award}
-                iconBg="hsl(var(--clr-green-bg))"
-                iconColor="hsl(var(--clr-green))"
+                iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
+                iconColor="text-emerald-600 dark:text-emerald-400"
               />
               <StatCard
                 label="Overall Average"
                 value={`${data?.summary.overallPercentage ?? 0}%`}
                 subtitle={(data?.summary.overallPercentage ?? 0) >= 70 ? "Passing" : "Needs improvement"}
-                subtitleColor={
-                  (data?.summary.overallPercentage ?? 0) >= 70 ? "hsl(var(--clr-green))" : "hsl(var(--clr-amber))"
-                }
+                subtitleColor={(data?.summary.overallPercentage ?? 0) >= 70 ? "var(--chart-2)" : "var(--chart-3)"}
                 icon={TrendingUp}
-                iconBg="hsl(var(--clr-blue-bg))"
-                iconColor="hsl(var(--clr-blue))"
+                iconBg="bg-blue-500/10 dark:bg-blue-500/20"
+                iconColor="text-blue-600 dark:text-blue-400"
               />
               <StatCard
                 label="Assignments"
                 value={data?.grades.length ?? 0}
                 subtitle="total assignments"
-                subtitleColor="hsl(var(--clr-purple))"
+                subtitleColor="var(--chart-5)"
                 icon={BarChart3}
-                iconBg="hsl(var(--clr-purple-bg))"
-                iconColor="hsl(var(--clr-purple))"
+                iconBg="bg-purple-500/10 dark:bg-purple-500/20"
+                iconColor="text-purple-600 dark:text-purple-400"
               />
             </>
           )}
@@ -123,11 +121,11 @@ export default function StudentGrades() {
               <div className="p-2.5">
                 <ChartContainer config={barConfig} className="h-[240px] w-full">
                   <BarChart data={data.gradeTrend}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                     <XAxis dataKey="title" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={60} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="percentage" fill="var(--clr-blue)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="percentage" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
               </div>
@@ -142,7 +140,7 @@ export default function StudentGrades() {
               <div className="flex items-center gap-6 p-3">
                 <ChartContainer config={distributionConfig} className="h-[190px] w-[190px]">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
                       {pieData.map((entry, index) => (
                         <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                       ))}
@@ -153,7 +151,7 @@ export default function StudentGrades() {
                 <div className="space-y-2">
                   {pieData.map((d, i) => (
                     <div key={d.name} className="flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: PIE_COLORS[i] }} />
+                      <div className="h-3 w-3 rounded-full shadow-xs" style={{ backgroundColor: PIE_COLORS[i] }} />
                       <span className="text-sm text-muted-foreground">{d.name}</span>
                       <span className="ml-auto text-sm font-semibold">{d.value}</span>
                     </div>

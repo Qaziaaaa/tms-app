@@ -1,4 +1,9 @@
+import dns from "node:dns";
 import mongoose from "mongoose";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {}
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -28,7 +33,8 @@ export async function connectDB() {
 
   if (!cached.promise) {
     if (process.env.TMS_TEST_MODE === "1") {
-      const dbName = new URL(MONGODB_URI!).pathname.replace(/^\//, "") || "(default)";
+      const dbNameMatch = MONGODB_URI!.match(/\/([^/?]+)(\?|$)/);
+      const dbName = dbNameMatch ? dbNameMatch[1] : "(default)";
       if (dbName !== TEST_DB_NAME) {
         throw new Error(
           `SAFETY GUARD: test mode requires the "${TEST_DB_NAME}" database but MONGODB_URI points at "${dbName}".`

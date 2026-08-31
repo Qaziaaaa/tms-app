@@ -1,6 +1,7 @@
 import { apiGet, apiPut, apiPost, apiDelete } from "@/lib/api-client";
 import type {
   PortalProfileDTO,
+  TeacherProfileDTO,
   PortalAttendanceDTO,
   PortalGradesDTO,
   PortalAssignmentsDTO,
@@ -14,6 +15,14 @@ export interface ChangePasswordPayload {
 
 export function getStudentProfile(): Promise<PortalProfileDTO> {
   return apiGet<PortalProfileDTO>("/student/profile");
+}
+
+export function getTeacherProfile(): Promise<TeacherProfileDTO> {
+  return apiGet<TeacherProfileDTO>("/teacher/profile");
+}
+
+export function updateTeacherProfile(data: { name: string }): Promise<{ id: string; name: string; email: string }> {
+  return apiPut<{ id: string; name: string; email: string }>("/teacher/profile", data);
 }
 
 export function getStudentAttendance(): Promise<PortalAttendanceDTO> {

@@ -59,9 +59,14 @@ export default function SettingsPage() {
   return (
     <AppShell user={{ name: session.user.name || "", email: session.user.email || "" }}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Manage your account settings</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">Manage your account security and preferences.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => router.push("/profile")}>
+            View Full Profile
+          </Button>
         </div>
 
         <Card className="max-w-md">
