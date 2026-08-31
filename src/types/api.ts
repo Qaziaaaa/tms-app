@@ -193,7 +193,35 @@ export interface PortalProfileDTO {
   name: string;
   email: string;
   rollNumber: string;
-  class: { id: string; name: string; department: string; batch: string };
+  class: { id: string; name: string; department: string; batch: string; schedule?: string } | null;
+  stats?: {
+    attendancePercentage: number;
+    totalDays: number;
+    presentCount: number;
+    totalAssignments: number;
+    submittedCount: number;
+    overallPercentage: number;
+  };
+  joinedAt?: string | Date;
+}
+
+export interface TeacherProfileDTO {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string | Date;
+  classesCount: number;
+  studentsCount: number;
+  totalAssignments: number;
+  totalSessions: number;
+  classes: {
+    id: string;
+    name: string;
+    department: string;
+    batch: string;
+    schedule?: string;
+  }[];
 }
 
 export interface PortalAttendanceDTO {

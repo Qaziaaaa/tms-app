@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-const TEACHER_ROUTES = ["/dashboard", "/classes", "/students", "/attendance", "/assignments", "/insights", "/reports", "/settings"];
+const TEACHER_ROUTES = ["/dashboard", "/classes", "/students", "/attendance", "/assignments", "/insights", "/reports", "/settings", "/profile"];
 const STUDENT_ROUTES = ["/student"];
 
 function isTeacherRoute(pathname: string): boolean {

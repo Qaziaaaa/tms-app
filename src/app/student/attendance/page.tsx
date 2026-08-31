@@ -20,8 +20,8 @@ import { getStudentAttendance } from "@/lib/api";
 import type { PortalAttendanceDTO } from "@/types/api";
 
 const chartConfig = {
-  present: { label: "Present", color: "var(--clr-green)" },
-  absent: { label: "Absent", color: "var(--clr-red)" },
+  present: { label: "Present", color: "var(--chart-2)" },
+  absent: { label: "Absent", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
 function formatDate(date: string) {
@@ -79,29 +79,29 @@ export default function StudentAttendance() {
                 label="Present"
                 value={summary?.present ?? 0}
                 icon={CalendarCheck}
-                iconBg="hsl(var(--clr-green-bg))"
-                iconColor="hsl(var(--clr-green))"
+                iconBg="bg-emerald-500/10 dark:bg-emerald-500/20"
+                iconColor="text-emerald-600 dark:text-emerald-400"
               />
               <StatCard
                 label="Absent"
                 value={summary?.absent ?? 0}
                 icon={CalendarX}
-                iconBg="hsl(var(--clr-red-bg))"
-                iconColor="hsl(var(--clr-red))"
+                iconBg="bg-rose-500/10 dark:bg-rose-500/20"
+                iconColor="text-rose-600 dark:text-rose-400"
               />
               <StatCard
                 label="Total Days"
                 value={summary?.totalDays ?? 0}
                 icon={CalendarDays}
-                iconBg="hsl(var(--clr-blue-bg))"
-                iconColor="hsl(var(--clr-blue))"
+                iconBg="bg-blue-500/10 dark:bg-blue-500/20"
+                iconColor="text-blue-600 dark:text-blue-400"
               />
               <StatCard
                 label="Attendance"
                 value={`${percentage}%`}
                 icon={Percent}
-                iconBg="hsl(var(--clr-amber-bg))"
-                iconColor="hsl(var(--clr-amber))"
+                iconBg="bg-amber-500/10 dark:bg-amber-500/20"
+                iconColor="text-amber-600 dark:text-amber-400"
               />
             </>
           )}
@@ -116,12 +116,12 @@ export default function StudentAttendance() {
             <div className="p-2.5">
               <ChartContainer config={chartConfig} className="h-[240px] w-full">
                 <BarChart data={data.monthlyBreakdown}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="present" fill="var(--clr-green)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="absent" fill="var(--clr-red)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="present" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="absent" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ChartContainer>
             </div>

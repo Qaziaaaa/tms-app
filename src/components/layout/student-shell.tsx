@@ -115,29 +115,38 @@ function SidebarDesktop({ name, email, onSignOut }: { name: string; email: strin
               <span className="block truncate text-[11px] text-muted-foreground">{email}</span>
             </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end" side="right" sideOffset={8}>
+          <DropdownMenuContent className="w-56 p-1.5" align="end" side="right" sideOffset={12}>
             <DropdownMenuGroup>
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span className="truncate text-sm font-medium text-card-foreground">{name}</span>
+              <DropdownMenuLabel className="px-2 py-1.5">
+                <div className="flex flex-col space-y-0.5">
+                  <span className="truncate text-sm font-semibold text-card-foreground">{name}</span>
                   <span className="truncate text-xs text-muted-foreground">{email}</span>
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="my-1" />
             <DropdownMenuItem
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+              onClick={() => (window.location.href = "/student/profile")}
+            >
+              <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
               onClick={() => (window.location.href = "/student/password")}
             >
-              <Lock className="h-4 w-4" />
+              <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
               <span>Change Password</span>
             </DropdownMenuItem>
-            <div className="p-1">
-              <ThemeToggle />
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onSignOut} className="flex items-center gap-2">
-              <LogOut className="h-4 w-4" />
+            <ThemeToggle />
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={onSignOut}
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -184,29 +193,38 @@ function MobileMenu({ name, email, onSignOut }: { name: string; email: string; o
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-<DropdownMenuContent className="w-56" align="end" sideOffset={8}>
+      <DropdownMenuContent className="w-56 p-1.5" align="end" sideOffset={8}>
         <DropdownMenuGroup>
-          <DropdownMenuLabel>
-            <div className="flex flex-col">
-              <span className="truncate text-sm font-medium text-card-foreground">{name}</span>
+          <DropdownMenuLabel className="px-2 py-1.5">
+            <div className="flex flex-col space-y-0.5">
+              <span className="truncate text-sm font-semibold text-card-foreground">{name}</span>
               {email && <span className="truncate text-xs text-muted-foreground">{email}</span>}
             </div>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-1" />
         <DropdownMenuItem
-          className="flex items-center gap-2"
-          onClick={() => (window.location.href = "/student/password")}
+          className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+          onClick={() => (window.location.href = "/student/profile")}
         >
-          <UserIcon className="h-4 w-4" />
+          <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <div className="p-1">
-          <ThemeToggle />
-        </div>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onSignOut} className="flex items-center gap-2">
-          <LogOut className="h-4 w-4" />
+        <DropdownMenuItem
+          className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+          onClick={() => (window.location.href = "/student/password")}
+        >
+          <Lock className="mr-2 h-4 w-4 text-muted-foreground" />
+          <span>Change Password</span>
+        </DropdownMenuItem>
+        <ThemeToggle />
+        <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={onSignOut}
+          className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+        >
+          <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

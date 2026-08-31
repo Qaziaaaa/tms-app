@@ -36,12 +36,12 @@ import type {
 } from "@/types/api";
 
 const attendanceChartConfig = {
-  present: { label: "Present", color: "var(--clr-green)" },
-  absent: { label: "Absent", color: "var(--clr-red)" },
+  present: { label: "Present", color: "var(--chart-2)" },
+  absent: { label: "Absent", color: "var(--chart-4)" },
 } satisfies ChartConfig;
 
 const gradeChartConfig = {
-  percentage: { label: "Score %", color: "var(--clr-blue)" },
+  percentage: { label: "Score %", color: "var(--chart-1)" },
 } satisfies ChartConfig;
 
 function currentWeek() {
@@ -114,9 +114,9 @@ export default function StudentDashboard() {
   }
 
   const name = profile?.name || session.user.name || "Student";
-  const batch = profile?.class.batch || "—";
-  const className = profile?.class.name || "—";
-  const department = profile?.class.department || "";
+  const batch = profile?.class?.batch || "—";
+  const className = profile?.class?.name || "—";
+  const department = profile?.class?.department || "";
 
   const summary = attendance?.summary;
   const present = summary?.present ?? 0;
@@ -247,12 +247,12 @@ export default function StudentDashboard() {
                     <div className="p-2.5">
                       <ChartContainer config={attendanceChartConfig} className="h-[220px] w-full">
                         <BarChart data={attendance.monthlyBreakdown}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                           <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                           <YAxis tick={{ fontSize: 12 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="present" fill="var(--clr-green)" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="absent" fill="var(--clr-red)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="present" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
+                          <Bar dataKey="absent" fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ChartContainer>
                     </div>
@@ -269,11 +269,11 @@ export default function StudentDashboard() {
                     <div className="p-2.5">
                       <ChartContainer config={gradeChartConfig} className="h-[220px] w-full">
                         <BarChart data={grades.gradeTrend}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                           <XAxis dataKey="title" tick={{ fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={50} />
                           <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar dataKey="percentage" fill="var(--clr-blue)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="percentage" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
                         </BarChart>
                       </ChartContainer>
                     </div>

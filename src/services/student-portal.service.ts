@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/db";
-import { User, Student, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
+import { User, Student, AttendanceRecord, AttendanceSession, Assignment, AssignmentSubmission, Class } from "@/models";
 import { ApiError } from "@/lib/api-utils";
 import bcrypt from "bcryptjs";
 
@@ -17,12 +17,54 @@ export async function getStudentProfile(email: string) {
 
   const classDoc = await Class.findOne({ _id: student.classId }).lean();
 
+  const attendanceRecords = await AttendanceRecord.find({ studentId: student._id }).lean();
+  const presentCount = attendanceRecords.filter((r) => r.status === "PRESENT").length;
+  const totalDays = attendanceRecords.length;
+  const attendancePercentage = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
+
+  const assignmentIds = (await Assignment.find({ classId: student.classId }).select("_id").lean()).map((a) => a._id);
+  const totalAssignments = assignmentIds.length;
+  const submissions = await AssignmentSubmission.find({
+    studentId: student._id,
+    assignmentId: { $in: assignmentIds },
+    status: { $in: ["SUBMITTED", "LATE"] },
+  }).lean();
+  const submittedCount = submissions.length;
+
+  const gradedSubmissions = submissions.filter((s) => s.marks !== null && s.marks !== undefined);
+  let overallPercentage = 0;
+  if (gradedSubmissions.length > 0) {
+    const totalMarks = gradedSubmissions.reduce((acc, s) => acc + (s.marks ?? 0), 0);
+    const assignmentsMap = new Map(
+      (await Assignment.find({ _id: { $in: gradedSubmissions.map((s) => s.assignmentId) } }).lean()).map((a) => [String(a._id), a.totalMarks])
+    );
+    const totalPossible = gradedSubmissions.reduce((acc, s) => acc + (assignmentsMap.get(String(s.assignmentId)) || 100), 0);
+    overallPercentage = totalPossible > 0 ? Math.round((totalMarks / totalPossible) * 100) : 0;
+  }
+
   return {
-    id: student._id,
+    id: String(student._id),
     name: student.name,
     email: user.email,
     rollNumber: student.rollNumber,
-    class: classDoc,
+    class: classDoc
+      ? {
+          id: String(classDoc._id),
+          name: classDoc.name,
+          department: classDoc.department,
+          batch: classDoc.batch,
+          schedule: classDoc.schedule,
+        }
+      : null,
+    stats: {
+      attendancePercentage,
+      totalDays,
+      presentCount,
+      totalAssignments,
+      submittedCount,
+      overallPercentage,
+    },
+    joinedAt: user.createdAt,
   };
 }
 
@@ -311,4 +353,53 @@ export async function changePassword(email: string, currentPassword: string, new
   user.passwordHash = passwordHash;
   user.mustChangePassword = false;
   await user.save();
+}
+
+export async function getTeacherProfile(email: string) {
+  await connectDB();
+  const user = await User.findOne({ email, role: "teacher" }).lean();
+  if (!user) throw new ApiError(404, "Teacher user not found");
+
+  const [classesCount, studentsCount, totalAssignments, totalSessions] = await Promise.all([
+    Class.countDocuments(),
+    Student.countDocuments(),
+    Assignment.countDocuments(),
+    AttendanceSession.countDocuments(),
+  ]);
+
+  const classes = await Class.find().lean();
+
+  return {
+    id: String(user._id),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    joinedAt: user.createdAt,
+    classesCount,
+    studentsCount,
+    totalAssignments,
+    totalSessions,
+    classes: classes.map((c) => ({
+      id: String(c._id),
+      name: c.name,
+      department: c.department,
+      batch: c.batch,
+      schedule: c.schedule,
+    })),
+  };
+}
+
+export async function updateTeacherProfile(email: string, name: string) {
+  await connectDB();
+  const user = await User.findOneAndUpdate(
+    { email, role: "teacher" },
+    { name: name.trim() },
+    { new: true }
+  ).lean();
+  if (!user) throw new ApiError(404, "Teacher user not found");
+  return {
+    id: String(user._id),
+    name: user.name,
+    email: user.email,
+  };
 }

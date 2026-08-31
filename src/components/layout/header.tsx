@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,65 +13,106 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, LogOut, User, Calendar } from "lucide-react";
+import { Menu, LogOut, ChevronRight, Settings, User } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+const ROUTE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/classes": "Classes",
+  "/students": "Students",
+  "/attendance": "Attendance",
+  "/assignments": "Assignments",
+  "/insights": "AI Insights",
+  "/reports": "Reports",
+  "/settings": "Settings",
+  "/profile": "Profile",
+};
 
 interface HeaderProps {
   user: { name: string; email: string };
   onMenuClick: () => void;
 }
 
-export function Header({ user, onMenuClick }: HeaderProps) {
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
+function todayLabel() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
     day: "numeric",
-    year: "numeric",
   });
+}
+
+export function Header({ user, onMenuClick }: HeaderProps) {
+  const pathname = usePathname();
+  const matchedKey = Object.keys(ROUTE_TITLES).find(
+    (key) => pathname === key || pathname.startsWith(`${key}/`)
+  );
+  const title = matchedKey ? ROUTE_TITLES[matchedKey] : "Dashboard";
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 sm:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
-        <Menu className="h-5 w-5" />
-        <span className="sr-only">Toggle menu</span>
-      </Button>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-card/80 backdrop-blur-sm px-4 sm:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Button variant="ghost" size="icon" className="lg:hidden shrink-0 -ml-2" onClick={onMenuClick}>
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Toggle menu</span>
+        </Button>
 
-      <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-        <Calendar className="h-4 w-4" />
-        <span>{today}</span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="whitespace-nowrap text-sm font-medium text-muted-foreground">Home</span>
+          <ChevronRight size={14} className="text-muted-foreground" />
+          <span className="truncate text-sm font-semibold text-card-foreground">{title}</span>
+        </div>
       </div>
 
-      <div className="flex-1" />
-      <DropdownMenu>
-        <DropdownMenuTrigger className="relative flex h-9 items-center gap-2 rounded-lg px-2 hover:bg-accent transition-colors">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
-          </Avatar>
-          <span className="hidden sm:flex text-sm font-medium">{user.name}</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" /> Profile
+      <div className="flex shrink-0 items-center gap-3">
+        <span className="text-xs font-medium text-muted-foreground">{todayLabel()}</span>
+        <div className="lg:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center justify-center rounded-full">
+              <Avatar className="h-8 w-8 text-xs ring-2 ring-border/50">
+                <AvatarFallback className="bg-muted text-primary font-bold">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-1.5">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="px-2 py-1.5">
+                <div className="flex flex-col space-y-0.5">
+                  <span className="truncate text-sm font-semibold text-card-foreground">{user.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                </div>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+              onClick={() => (window.location.href = "/profile")}
+            >
+              <User className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Profile</span>
             </DropdownMenuItem>
-            <div className="p-1">
-              <ThemeToggle />
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
+            <DropdownMenuItem
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+              onClick={() => (window.location.href = "/settings")}
+            >
+              <Settings className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span>Settings</span>
             </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <ThemeToggle />
+            <DropdownMenuSeparator className="my-1" />
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     </header>
   );
 }

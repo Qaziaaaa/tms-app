@@ -1,6 +1,11 @@
+import dns from "node:dns";
 import "dotenv/config";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {}
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
