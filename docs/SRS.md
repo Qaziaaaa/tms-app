@@ -1,8 +1,8 @@
 # Software Requirements Specification (SRS)
 
 **Project:** Teacher Management System (TMS)
-**Version:** 1.0
-**Date:** August 2026
+**Version:** 2.0
+**Date:** September 2026 (v1.0 Aug 2026; updated for multi-tenant product direction)
 
 ---
 
@@ -16,14 +16,18 @@ This document specifies the functional and non-functional requirements for the T
 
 TMS enables teachers to manage classes, track student attendance, create and grade assignments, generate performance reports, and receive AI-powered insights. Students can view their own attendance, assignments, grades, and manage their password through a dedicated portal.
 
+The product is evolving from a single-tenant system to a **multi-tenant SaaS** in which each teacher account is its own isolated tenant (`ownerId` scoping). The phased requirements for this evolution are in **§10**.
+
 ### 1.3 Definitions
 
 | Term | Definition |
 |------|-----------|
-| Teacher | A user with full CRUD access to all system data |
+| Teacher | A user with full CRUD access to their own data (a tenant) |
 | Student | A user with read-only access to their own data plus password management |
 | Session | An attendance tracking instance for a specific class on a specific date |
 | Submission | A student's record of turning in an assignment |
+| Tenant | A teacher account and all data that belongs to it (`ownerId`) |
+| Recorded session | A class session with ≥ 1 attendance record (basis for attendance %) |
 
 ---
 
@@ -31,14 +35,15 @@ TMS enables teachers to manage classes, track student attendance, create and gra
 
 ### 2.1 Product Perspective
 
-TMS is a standalone web application built on Next.js 16 with a MongoDB backend. It operates as a single-tenant system where all data belongs to one educational institution.
+TMS is a standalone web application built on Next.js 16 with a MongoDB backend. It operates as a single-tenant system today; **Phase 1 makes it multi-tenant** (per-teacher `ownerId` scoping) so each teacher sees only their own data.
 
 ### 2.2 User Classes
 
 | Role | Capabilities | Access Level |
 |------|-------------|-------------|
-| Teacher | Full CRUD on classes, students, attendance, assignments; view reports; generate AI insights | All teacher portal features |
+| Teacher | Full CRUD on classes, students, attendance, assignments; view reports; generate AI insights | All teacher portal features (own tenant only) |
 | Student | View own profile, attendance, assignments, grades; change own password | Student portal only |
+| Admin (Phase 2) | List teachers, suspend/activate accounts | Admin area only |
 
 ### 2.3 Operating Environment
 
@@ -48,10 +53,11 @@ TMS is a standalone web application built on Next.js 16 with a MongoDB backend. 
 
 ### 2.4 Constraints
 
-- Single-tenant architecture (one institution per deployment)
+- Multi-tenant (per-teacher) architecture planned; single-tenant today
 - No offline capability
 - No mobile native apps (responsive web only)
 - AI insights require Groq API key
+- Target scale ≤ 50 teacher tenants per instance; no teams/org model
 
 ---
 
@@ -147,6 +153,15 @@ TMS is a standalone web application built on Next.js 16 with a MongoDB backend. 
 | FR-DSH-03 | Teacher dashboard shall show recent attendance sessions | Must |
 | FR-DSH-04 | Student dashboard shall display profile and attendance summary | Must |
 
+### 3.10 Attendance Percentage Semantics
+
+| ID | Requirement | Priority |
+|----|------------|----------|
+| FR-ATP-01 | Attendance percentage shall be calculated as PRESENT records ÷ recorded sessions | Must |
+| FR-ATP-02 | A recorded session is a class session with ≥ 1 attendance record | Must |
+| FR-ATP-03 | Sessions with no attendance records shall be excluded from all percentages | Must |
+| FR-ATP-04 | The same semantics shall apply in teacher views, reports, AI insights, and the student portal | Must |
+
 ---
 
 ## 4. Non-Functional Requirements
@@ -236,10 +251,56 @@ TMS is a standalone web application built on Next.js 16 with a MongoDB backend. 
 
 ---
 
-## 7. Assumptions
+## 10. Planned Requirements — Product Evolution
+
+Requirements for the transition from single-tenant to multi-tenant SaaS. Currently **planned** (not yet implemented).
+
+### 10.1 Phase 1 — Multi-tenancy (`ownerId` scoping)
+
+| ID | Requirement | Priority |
+|----|------------|----------|
+| FR-MT-01 | Class, Student, Assignment, AttendanceSession, and AttendanceRecord shall carry an `ownerId` referencing the owning teacher User | Must |
+| FR-MT-02 | Every create operation shall stamp `ownerId` from the authenticated teacher (never from request bodies) | Must |
+| FR-MT-03 | Every read/update/delete shall scope queries by `ownerId` in addition to the object id | Must |
+| FR-MT-04 | API routes shall resolve the current teacher from the session token, not from client-supplied values | Must |
+| FR-MT-05 | Reports and AI insights shall only consider the current teacher's classes | Must |
+| FR-MT-06 | Dashboard counts shall be per-teacher | Must |
+| FR-MT-07 | The student portal shall resolve class ownership transitively through the student's class | Must |
+| FR-MT-08 | Existing data shall be backfilled with the seeded teacher's `ownerId`; seed script shall stamp it going forward | Must |
+| FR-MT-09 | Accessing another tenant's object by id shall return 404/403 | Must |
+
+**Definition of done:** two teacher accounts see fully disjoint data; cross-tenant ID guessing fails.
+
+### 10.2 Phase 2 — Self-serve signup & Admin
+
+| ID | Requirement | Priority |
+|----|------------|----------|
+| FR-SGN-01 | Teachers shall register via `/signup` (name, email, password), creating a new tenant | Must |
+| FR-SGN-02 | Duplicate emails shall be rejected | Must |
+| FR-SGN-03 | `/admin` shall list teachers and allow suspend/activate | Must |
+| FR-SGN-04 | Admin access shall be gated by an admin role | Must |
+
+### 10.3 Phase 3 — Billing (Stripe)
+
+| ID | Requirement | Priority |
+|----|------------|----------|
+| FR-BIL-01 | Teachers shall subscribe via Stripe (monthly/yearly) | Should |
+| FR-BIL-02 | Non-paying/suspended tenants shall be handled gracefully | Should |
+| FR-BIL-03 | Stripe webhooks shall update subscription state | Should |
+
+### 10.4 Phase 4 — Landing page & routes
+
+| ID | Requirement | Priority |
+|----|------------|----------|
+| FR-LND-01 | A public marketing landing page shall exist at `/` | Should |
+| FR-LND-02 | The application shell shall remain gated behind auth | Must |
+
+---
+
+## 11. Assumptions
 
 1. MongoDB is available and accessible at the configured URI
 2. Teachers have valid credentials provisioned before using the system
 3. Students are created by teachers (no self-registration)
-4. The system serves a single educational institution per deployment
+4. The system serves multiple teacher tenants; each teacher owns their data
 5. Internet access is available for font loading and optional AI features

@@ -13,7 +13,7 @@ A full-stack web application for managing educational workflows — attendance, 
 | Auth | NextAuth.js v5 (JWT, Credentials) |
 | Charts | Recharts 3 |
 | Validation | Zod 4 |
-| AI | Groq API (llama-3.1-8b-instant) |
+| AI | Groq API (openai/gpt-oss-120b) |
 | Testing | Playwright |
 
 ## Quick Start
@@ -36,7 +36,7 @@ npm run dev
 | Role | Email | Password |
 |------|-------|----------|
 | Teacher | teacher@tms.edu | password123 |
-| Student | ahmed@student.edu | password123 |
+| Student | `<firstname><last3-of-roll>@uop.edu` (e.g. farhan301@uop.edu) | student123 (must change) |
 
 ## Features
 
@@ -87,7 +87,10 @@ src/
 
 | Document | Description |
 |----------|-------------|
-| [SRS](docs/SRS.md) | Software Requirements Specification |
+| [Product Requirements](docs/PRD.md) | Product vision, personas, tenancy decision, phased scope |
+| [Roadmap](docs/ROADMAP.md) | Phased implementation plan with status checklists |
+| [Project Memory](docs/memory.md) | Environment, auth gotchas, decisions, work state |
+| [SRS](docs/SRS.md) | Software Requirements Specification (+ planned multi-tenant requirements) |
 | [Architecture](docs/SAD.md) | Software Architecture Document |
 | [API Reference](docs/API.md) | Complete API endpoint documentation |
 | [Database Schema](docs/DATABASE.md) | MongoDB schema design and relationships |
