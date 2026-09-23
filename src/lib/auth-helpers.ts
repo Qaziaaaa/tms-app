@@ -10,6 +10,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: request.cookies.get("__Secure-authjs.session-token") !== undefined,
   });
 
   if (!token) {

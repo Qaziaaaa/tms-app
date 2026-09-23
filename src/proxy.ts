@@ -49,9 +49,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  const authToken = (): Promise<import("next-auth/jwt").JWT | null> =>
+    getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie: request.cookies.get("__Secure-authjs.session-token") !== undefined,
+    });
+
   if (pathname === "/login" || pathname.startsWith("/api/auth")) {
     if (pathname === "/login") {
-      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+      const token = await authToken();
       if (token) {
         const role = token.role as string;
         return addSecurityHeaders(NextResponse.redirect(new URL(role === "student" ? "/student/dashboard" : "/dashboard", request.url)));
@@ -60,10 +67,7 @@ export async function proxy(request: NextRequest) {
     return addSecurityHeaders(NextResponse.next());
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
+  const token = await authToken();
 
   if (!token) {
     if (pathname.startsWith("/api/")) {
