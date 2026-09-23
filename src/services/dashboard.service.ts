@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { Class, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
 import { RECENT_ITEMS_LIMIT } from "@/lib/constants";
+import { getRecordedSessionIds } from "@/lib/attendance";
 
 export async function getDashboard() {
   await connectDB();
@@ -33,14 +34,14 @@ export async function getDashboard() {
       const sessionCount = await AttendanceSession.countDocuments({ classId: cls._id });
 
       let averageAttendance = 0;
-      if (sessionCount > 0 && studentCount > 0) {
-        const sessions = await AttendanceSession.find({ classId: cls._id }).select("_id").lean();
-        const sessionIds = sessions.map((s) => s._id);
+      const sessionIds = await getRecordedSessionIds(String(cls._id));
+      const recordedSessionCount = sessionIds.length;
+      if (recordedSessionCount > 0 && studentCount > 0) {
         const presentCount = await AttendanceRecord.countDocuments({
           sessionId: { $in: sessionIds },
           status: "PRESENT",
         });
-        const totalPossible = sessionCount * studentCount;
+        const totalPossible = recordedSessionCount * studentCount;
         averageAttendance = totalPossible > 0
           ? Math.round((presentCount / totalPossible) * 100)
           : 0;

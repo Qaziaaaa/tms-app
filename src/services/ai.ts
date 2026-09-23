@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
-import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
+import { Student, AttendanceRecord, Assignment, AssignmentSubmission, Class } from "@/models";
 import { AI_CONFIG } from "@/lib/constants";
+import { getRecordedSessionIds } from "@/lib/attendance";
 
 async function callGroq(prompt: string): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
@@ -88,18 +89,18 @@ async function getClassDataForAI(classId: string) {
 
   const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
 
-  const totalSessions = await AttendanceSession.countDocuments({ classId });
+  const totalSessions = await getRecordedSessionIds(classId).then((ids) => ids.length);
   const assignments = await Assignment.find({ classId }).select("_id totalMarks").lean();
   const totalAssignments = assignments.length;
   const totalPossibleMarks = assignments.reduce((sum, a) => sum + (a.totalMarks ?? 0), 0);
   const assignmentIds = assignments.map((a) => a._id);
-  const sessionIds = await AttendanceSession.find({ classId }).select("_id").lean();
+  const sessionIds = await getRecordedSessionIds(classId);
 
   const studentData = await Promise.all(
     students.map(async (student) => {
       const sessionsAttended = await AttendanceRecord.countDocuments({
         studentId: student._id,
-        sessionId: { $in: sessionIds.map((s) => s._id) },
+        sessionId: { $in: sessionIds },
         status: "PRESENT",
       });
 

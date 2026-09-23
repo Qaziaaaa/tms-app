@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { Class, Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
 import { ApiError } from "@/lib/api-utils";
+import { getRecordedSessionIds } from "@/lib/attendance";
 
 export async function getClasses() {
   await connectDB();
@@ -9,7 +10,7 @@ export async function getClasses() {
 
   const classIds = classes.map((c) => c._id);
 
-  const [studentCounts, sessionCounts, presentCounts] = await Promise.all([
+  const [studentCounts, sessionCounts, recordedSessionCounts, presentCounts] = await Promise.all([
     Student.aggregate([
       { $match: { classId: { $in: classIds } } },
       { $group: { _id: "$classId", count: { $sum: 1 } } },
@@ -21,6 +22,13 @@ export async function getClasses() {
     AttendanceRecord.aggregate([
       { $lookup: { from: "attendancesessions", localField: "sessionId", foreignField: "_id", as: "session" } },
       { $unwind: "$session" },
+      { $match: { "session.classId": { $in: classIds } } },
+      { $group: { _id: { classId: "$session.classId", sessionId: "$sessionId" } } },
+      { $group: { _id: "$_id.classId", count: { $sum: 1 } } },
+    ]),
+    AttendanceRecord.aggregate([
+      { $lookup: { from: "attendancesessions", localField: "sessionId", foreignField: "_id", as: "session" } },
+      { $unwind: "$session" },
       { $match: { "session.classId": { $in: classIds }, status: "PRESENT" } },
       { $group: { _id: "$session.classId", count: { $sum: 1 } } },
     ]),
@@ -28,14 +36,16 @@ export async function getClasses() {
 
   const studentMap = new Map(studentCounts.map((d) => [String(d._id), d.count]));
   const sessionMap = new Map(sessionCounts.map((d) => [String(d._id), d.count]));
+  const recordedSessionMap = new Map(recordedSessionCounts.map((d) => [String(d._id), d.count]));
   const presentMap = new Map(presentCounts.map((d) => [String(d._id), d.count]));
 
   return classes.map((cls) => {
     const id = String(cls._id);
     const studentCount = studentMap.get(id) || 0;
     const sessionCount = sessionMap.get(id) || 0;
+    const recordedSessionCount = recordedSessionMap.get(id) || 0;
     const presentCount = presentMap.get(id) || 0;
-    const totalPossible = sessionCount * studentCount;
+    const totalPossible = recordedSessionCount * studentCount;
     const averageAttendance = totalPossible > 0 ? Math.round((presentCount / totalPossible) * 100) : 0;
     return { ...cls, studentCount, sessionCount, averageAttendance };
   });
@@ -121,11 +131,12 @@ export async function getClassDetail(id: string) {
 
   let averageAttendance = 0;
   let averageMarks = 0;
-  const allSessionIds = (await AttendanceSession.find({ classId: id }).select("_id").lean()).map((s) => s._id);
+  const allSessionIds = await getRecordedSessionIds(id);
+  const recordedSessionCount = allSessionIds.length;
 
-  if (sessionCount > 0 && students.length > 0) {
+  if (recordedSessionCount > 0 && students.length > 0) {
     const presentCount = await AttendanceRecord.countDocuments({ sessionId: { $in: allSessionIds }, status: "PRESENT" });
-    const totalPossible = sessionCount * students.length;
+    const totalPossible = recordedSessionCount * students.length;
     averageAttendance = totalPossible > 0 ? Math.round((presentCount / totalPossible) * 100) : 0;
   }
 
@@ -141,13 +152,13 @@ export async function getClassDetail(id: string) {
   const studentStats = await Promise.all(
     students.map(async (s) => {
       let attendancePct = 0;
-      if (sessionCount > 0 && allSessionIds.length > 0) {
+      if (recordedSessionCount > 0 && allSessionIds.length > 0) {
         const attended = await AttendanceRecord.countDocuments({
           studentId: s._id,
           sessionId: { $in: allSessionIds },
           status: "PRESENT",
         });
-        attendancePct = Math.round((attended / sessionCount) * 100);
+        attendancePct = Math.round((attended / recordedSessionCount) * 100);
       }
       const subs = await AssignmentSubmission.find({ studentId: s._id }).lean();
       const subsWithMarks = subs.filter((sub) => sub.marks != null);
@@ -162,6 +173,7 @@ export async function getClassDetail(id: string) {
     class: { id: String(cls._id), name: cls.name, department: cls.department, batch: cls.batch, schedule: cls.schedule },
     totalStudents: students.length,
     totalSessions: sessionCount,
+    recordedSessions: recordedSessionCount,
     averageAttendance,
     averageMarks,
     totalAssignments,

@@ -1,13 +1,13 @@
 import { connectDB } from "@/lib/db";
-import { Student, AttendanceSession, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
+import { Student, AttendanceRecord, Assignment, AssignmentSubmission } from "@/models";
+import { getRecordedSessionIds } from "@/lib/attendance";
 
 export async function getAttendanceReport(classId: string) {
   await connectDB();
 
   const students = await Student.find({ classId }).sort({ rollNumber: "asc" }).lean();
-  const sessions = await AttendanceSession.find({ classId }).select("_id").lean();
-  const totalSessions = sessions.length;
-  const sessionIds = sessions.map((s) => s._id);
+  const sessionIds = await getRecordedSessionIds(classId);
+  const totalSessions = sessionIds.length;
 
   const studentStats = await Promise.all(
     students.map(async (student) => {

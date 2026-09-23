@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/db";
 import { User, Student, AttendanceRecord, AttendanceSession, Assignment, AssignmentSubmission, Class } from "@/models";
 import { ApiError } from "@/lib/api-utils";
+import { getRecordedSessionIds } from "@/lib/attendance";
 import bcrypt from "bcryptjs";
 
 async function findStudentByEmail(email: string) {
@@ -19,7 +20,8 @@ export async function getStudentProfile(email: string) {
 
   const attendanceRecords = await AttendanceRecord.find({ studentId: student._id }).lean();
   const presentCount = attendanceRecords.filter((r) => r.status === "PRESENT").length;
-  const totalDays = attendanceRecords.length;
+  const recordedSessionCount = await getRecordedSessionIds(String(student.classId)).then((ids) => ids.length);
+  const totalDays = recordedSessionCount > 0 ? recordedSessionCount : attendanceRecords.length;
   const attendancePercentage = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
 
   const assignmentIds = (await Assignment.find({ classId: student.classId }).select("_id").lean()).map((a) => a._id);
@@ -82,8 +84,9 @@ export async function getStudentAttendance(email: string) {
     .lean();
 
   const presentCount = records.filter((r) => r.status === "PRESENT").length;
-  const absentCount = records.filter((r) => r.status === "ABSENT").length;
-  const totalDays = records.length;
+  const recordedSessionCount = await getRecordedSessionIds(String(student.classId)).then((ids) => ids.length);
+  const totalDays = recordedSessionCount > 0 ? recordedSessionCount : records.length;
+  const absentCount = totalDays - presentCount;
   const percentage = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
